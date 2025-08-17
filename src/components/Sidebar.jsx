@@ -3,28 +3,36 @@ import {
   RiDashboardLine,
   RiUser3Line,
   RiMessage3Line,
-  RiSettings3Line,
-  RiLogoutBoxRLine,
-  RiArrowDownSLine,
   RiBusFill,
   RiAdminFill,
   RiTicket2Fill,
   RiMoneyDollarBoxLine,
   RiShoppingBag2Fill,
-  RiCloseLine,
-  RiMenu3Line,
-  RiDriveFill,
   RiDriveLine,
   RiAirplayFill,
+  RiLogoutBoxRLine,
+  RiCloseLine,
+  RiMenu3Line,
 } from 'react-icons/ri';
 import { Link } from 'react-router-dom';
 import qlogo from '../assets/qlogo.jfif';
 
 const Sidebar = () => {
-  const [openSubMenu, setOpenSubMenu] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const links = [
+    { label: 'داشبورد', icon: <RiDashboardLine />, to: '/' },
+    // { label: 'کاربران', icon: <RiUser3Line />, to: '/employees' },
+    // { label: 'پیام‌ها', icon: <RiMessage3Line />, to: '/messages' },
+    { label: 'بس ها', icon: <RiBusFill />, to: '/bus' },
+    { label: 'ادمین ها', icon: <RiAdminFill />, to: '/admins' },
+    // { label: 'سفارشات', icon: <RiTicket2Fill />, to: '/orders' },
+    // { label: 'عاید ما', icon: <RiMoneyDollarBoxLine />, to: '/income' },
+    // { label: 'فروشات ما', icon: <RiShoppingBag2Fill />, to: '/sells' },
+    { label: 'راننده ها', icon: <RiDriveLine />, to: '/driver' },
+    { label: 'سفرها', icon: <RiAirplayFill />, to: '/trips' },
+  ];
 
   return (
     <>
@@ -63,35 +71,9 @@ const Sidebar = () => {
 
         {/* Nav items */}
         <nav className="flex flex-col gap-1 px-4 font-medium text-base">
-          <SidebarLink icon={<RiDashboardLine />} label="داشبورد" to="/" />
-
-          <div>
-            <button
-              onClick={() => setOpenSubMenu(!openSubMenu)}
-              className="w-full flex justify-between items-center hover:bg-orange-600 py-2 px-3 rounded transition"
-              aria-expanded={openSubMenu}
-            >
-              <div className="flex gap-2 items-center justify-end">
-                <span>مدیریت</span>
-                <RiSettings3Line className="text-lg" />
-              </div>
-              <RiArrowDownSLine />
-            </button>
-
-            {openSubMenu && (
-              <div className="mr-5 mt-1 flex flex-col gap-1 text-sm">
-                <SidebarLink label="کاربران" icon={<RiUser3Line />} to="/employees" small />
-                <SidebarLink label="پیام‌ها" icon={<RiMessage3Line />} to="/messages" small />
-                <SidebarLink label="بس ها" icon={<RiBusFill />} to="/bus" small />
-                <SidebarLink label="ادمین ها" icon={<RiAdminFill />} to="/admins" small />
-                <SidebarLink label="سفارشات" icon={<RiTicket2Fill />} to="/orders" small />
-                <SidebarLink label="عاید ما" icon={<RiMoneyDollarBoxLine />} to="/income" small />
-                <SidebarLink label="فروشات ما" icon={<RiShoppingBag2Fill />} to="/sells" small />
-                <SidebarLink label=" راننده ها" icon={<RiDriveLine />} to="/driver" small />
-                 <SidebarLink label=" سفرها " icon={<RiAirplayFill />} to="/trips" small />
-              </div>
-            )}
-          </div>
+          {links.map((link, idx) => (
+            <SidebarLink key={idx} {...link} />
+          ))}
         </nav>
 
         {/* Logout button */}
@@ -106,18 +88,14 @@ const Sidebar = () => {
   );
 };
 
-const SidebarLink = ({ icon, label, to, small = false }) => {
-  return (
-    <Link
-      to={to}
-      className={`w-full flex justify-end items-center gap-3 hover:bg-orange-600 py-2 px-3 rounded transition text-right ${
-        small ? 'text-sm' : ''
-      }`}
-    >
-      <span>{label}</span>
-      <span className="text-lg">{icon}</span>
-    </Link>
-  );
-};
+const SidebarLink = ({ icon, label, to }) => (
+  <Link
+    to={to}
+    className="w-full flex justify-end items-center gap-3 hover:bg-orange-600 py-2 px-3 rounded transition text-right"
+  >
+    <span>{label}</span>
+    <span className="text-lg">{icon}</span>
+  </Link>
+);
 
 export default Sidebar;

@@ -5,37 +5,43 @@ const CustomFormModal = ({
   isOpen,
   onClose,
   onAdd,
-  title = 'افزودن شرکت جدید',
+  title = 'افزودن مورد جدید',
   titleIcon,
   fields = [],
-  children,
+  children
 }) => {
   const [formData, setFormData] = useState({});
 
+  // Initialize formData only once when modal opens
   useEffect(() => {
     if (!isOpen) return;
 
-    const isFormEmpty = Object.keys(formData).length === 0;
-    if (isFormEmpty) {
-      const initialData = fields.reduce((acc, field) => {
-        acc[field.name] = field.type === 'file' ? null : '';
-        if (field.type === 'file') acc[`${field.name}Preview`] = '';
-        return acc;
-      }, {});
+    // Only initialize if formData is empty
+    if (Object.keys(formData).length === 0) {
+      const initialData = {};
+      fields.forEach(field => {
+        initialData[field.name] = field.type === 'file' ? null : '';
+        if (field.type === 'file') initialData[`${field.name}Preview`] = '';
+      });
       setFormData(initialData);
     }
+  }, [isOpen, fields]);
+
+  // Reset formData when modal closes
+  useEffect(() => {
+    if (!isOpen) setFormData({});
   }, [isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
     if (files && files[0]) {
       const file = files[0];
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         [name]: file,
         [`${name}Preview`]: URL.createObjectURL(file),
@@ -46,7 +52,6 @@ const CustomFormModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     onAdd(formData);
-    setFormData({});
     onClose();
   };
 
@@ -61,14 +66,12 @@ const CustomFormModal = ({
     min,
     value,
     onChange,
-    preview,
+    preview
   }) => (
     <div>
       <label className="block mb-1 font-semibold text-[#0B2A5B] flex items-center gap-2">
-        {icon}
-        {label}
+        {icon}{label}
       </label>
-
       {type !== 'file' ? (
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 pointer-events-none">
@@ -81,7 +84,7 @@ const CustomFormModal = ({
             required={required}
             pattern={pattern}
             min={min}
-            value={value}
+            value={value === undefined || value === null ? '' : value}
             onChange={onChange}
             className="w-full border border-gray-300 rounded-md px-10 py-2 pr-3 focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-gray-400"
           />
@@ -95,13 +98,7 @@ const CustomFormModal = ({
             onChange={onChange}
             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
-          {preview && (
-            <img
-              src={preview}
-              alt="Preview"
-              className="mt-3 max-h-24 rounded-md object-contain"
-            />
-          )}
+          {preview && <img src={preview} alt="Preview" className="mt-3 max-h-24 rounded-md object-contain" />}
         </>
       )}
     </div>
@@ -109,9 +106,8 @@ const CustomFormModal = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black transition-all duration-300 ${
-        isOpen ? 'bg-opacity-40 visible opacity-100' : 'bg-opacity-0 invisible opacity-0 pointer-events-none'
-      }`}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black transition-all duration-300
+        ${isOpen ? 'bg-opacity-40 visible opacity-100' : 'bg-opacity-0 invisible opacity-0 pointer-events-none'}`}
     >
       <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6 font-vazir text-right">
         <h2 className="text-2xl font-bold mb-6 text-[#0B2A5B] flex items-center gap-2">
@@ -119,21 +115,13 @@ const CustomFormModal = ({
           {title}
         </h2>
 
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-6"
-        >
-          {fields.map((field) => (
-            <div
-              key={field.name}
-              className={field.type === 'file' ? 'sm:col-span-2' : ''}
-            >
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {fields.map(field => (
+            <div key={field.name} className={field.type === 'file' ? 'sm:col-span-2' : ''}>
               <InputWithIcon
                 {...field}
-                value={formData[field.name] || ''}
-                onChange={
-                  field.type === 'file' ? handleFileChange : handleChange
-                }
+                value={formData[field.name]}
+                onChange={field.type === 'file' ? handleFileChange : handleChange}
                 preview={formData[`${field.name}Preview`]}
               />
             </div>
@@ -144,10 +132,7 @@ const CustomFormModal = ({
           <div className="sm:col-span-2 flex justify-between items-center mt-6">
             <button
               type="button"
-              onClick={() => {
-                setFormData({});
-                onClose();
-              }}
+              onClick={onClose}
               className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition"
             >
               انصراف

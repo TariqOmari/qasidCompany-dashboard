@@ -3,7 +3,7 @@ import React from 'react';
 import { MdDelete, MdEdit, MdVisibility } from 'react-icons/md';
 import qlogo from '../assets/qlogo.jfif';
 
-const CustomTable = ({ columns = [], data = [], title = 'جدول اطلاعات', onView }) => {
+const CustomTable = ({ columns = [], data = [], title = 'جدول اطلاعات', onView, onEdit, onDelete }) => {
   return (
     <div className="bg-white rounded-2xl shadow-md p-6 w-full overflow-x-auto font-sans" dir="rtl">
       {/* Header Section */}
@@ -60,12 +60,14 @@ const CustomTable = ({ columns = [], data = [], title = 'جدول اطلاعات
                     <button
                       className="text-[#F37021] hover:text-orange-600 transition"
                       title="ویرایش"
+                      onClick={() => onEdit && onEdit(row)}
                     >
                       <MdEdit size={20} />
                     </button>
                     <button
                       className="text-[#F37021] hover:text-orange-600 transition"
                       title="حذف"
+                      onClick={() => onDelete && onDelete(row.id)}
                     >
                       <MdDelete size={20} />
                     </button>
