@@ -25,10 +25,15 @@ const handleSubmit = async (e) => {
       password,
     });
 
-    const { token, user } = res.data;
+    // destructure response
+    const { token, company } = res.data;
 
+    // ✅ Save token & company info in sessionStorage
     sessionStorage.setItem("auth_token", token);
-    sessionStorage.setItem("user", JSON.stringify(user));
+        sessionStorage.setItem("name", company.name);
+    sessionStorage.setItem("company", JSON.stringify(company));
+    sessionStorage.setItem("username", company.username);
+    sessionStorage.setItem("logo_url", company.logo_url);
 
     toast.success("ورود موفقیت‌آمیز بود");
     navigate("/");
@@ -38,6 +43,7 @@ const handleSubmit = async (e) => {
     setIsSubmitting(false);
   }
 };
+
 
 
   // ✅ Full page loader while logging in

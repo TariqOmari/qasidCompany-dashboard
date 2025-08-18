@@ -5,43 +5,43 @@ const CustomFormModal = ({
   isOpen,
   onClose,
   onAdd,
+  onUpdate,
   title = 'افزودن مورد جدید',
   titleIcon,
   fields = [],
-  children
+  initialData = null, // for editing
+  children,
 }) => {
   const [formData, setFormData] = useState({});
 
-  // Initialize formData only once when modal opens
+  // Initialize formData when modal opens or when initialData changes
   useEffect(() => {
     if (!isOpen) return;
 
-    // Only initialize if formData is empty
-    if (Object.keys(formData).length === 0) {
-      const initialData = {};
-      fields.forEach(field => {
-        initialData[field.name] = field.type === 'file' ? null : '';
-        if (field.type === 'file') initialData[`${field.name}Preview`] = '';
-      });
-      setFormData(initialData);
-    }
-  }, [isOpen, fields]);
+    const initialFormValues = fields.reduce((acc, field) => {
+      if (field.type === 'file') {
+        acc[field.name] = null;
+        acc[`${field.name}Preview`] =
+          initialData && initialData[field.name] ? initialData[field.name] : '';
+      } else {
+        acc[field.name] = initialData ? initialData[field.name] || '' : '';
+      }
+      return acc;
+    }, {});
 
-  // Reset formData when modal closes
-  useEffect(() => {
-    if (!isOpen) setFormData({});
-  }, [isOpen]);
+    setFormData(initialFormValues);
+  }, [isOpen, initialData, fields]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
     if (files && files[0]) {
       const file = files[0];
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         [name]: file,
         [`${name}Preview`]: URL.createObjectURL(file),
@@ -49,60 +49,20 @@ const CustomFormModal = ({
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onAdd(formData);
-    onClose();
+    try {
+      if (initialData && onUpdate) {
+        await onUpdate(formData);
+      } else if (onAdd) {
+        await onAdd(formData);
+      }
+      onClose();
+    } catch (err) {
+      console.error(err);
+      // keep modal open on error
+    }
   };
-
-  const InputWithIcon = ({
-    icon,
-    label,
-    name,
-    type = 'text',
-    placeholder,
-    required = false,
-    pattern,
-    min,
-    value,
-    onChange,
-    preview
-  }) => (
-    <div>
-      <label className="block mb-1 font-semibold text-[#0B2A5B] flex items-center gap-2">
-        {icon}{label}
-      </label>
-      {type !== 'file' ? (
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 pointer-events-none">
-            {icon}
-          </div>
-          <input
-            name={name}
-            type={type}
-            placeholder={placeholder}
-            required={required}
-            pattern={pattern}
-            min={min}
-            value={value === undefined || value === null ? '' : value}
-            onChange={onChange}
-            className="w-full border border-gray-300 rounded-md px-10 py-2 pr-3 focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-gray-400"
-          />
-        </div>
-      ) : (
-        <>
-          <input
-            name={name}
-            type="file"
-            accept="image/*"
-            onChange={onChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
-          />
-          {preview && <img src={preview} alt="Preview" className="mt-3 max-h-24 rounded-md object-contain" />}
-        </>
-      )}
-    </div>
-  );
 
   return (
     <div
@@ -116,11 +76,11 @@ const CustomFormModal = ({
         </h2>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {fields.map(field => (
+          {fields.map((field) => (
             <div key={field.name} className={field.type === 'file' ? 'sm:col-span-2' : ''}>
               <InputWithIcon
                 {...field}
-                value={formData[field.name]}
+                value={field.type === 'file' ? undefined : formData[field.name] || ''}
                 onChange={field.type === 'file' ? handleFileChange : handleChange}
                 preview={formData[`${field.name}Preview`]}
               />
@@ -141,7 +101,7 @@ const CustomFormModal = ({
               type="submit"
               className="px-4 py-2 bg-[#F37021] text-white rounded hover:bg-orange-600 transition"
             >
-              افزودن
+              {initialData ? 'به‌روزرسانی' : 'افزودن'}
             </button>
           </div>
         </form>
@@ -149,5 +109,62 @@ const CustomFormModal = ({
     </div>
   );
 };
+
+const InputWithIcon = ({
+  icon,
+  label,
+  name,
+  type = 'text',
+  placeholder,
+  required = false,
+  pattern,
+  min,
+  value,
+  onChange,
+  preview,
+}) => (
+  <div>
+    <label className="block mb-1 font-semibold text-[#0B2A5B] flex items-center gap-2">
+      {icon}
+      {label}
+    </label>
+
+    {type !== 'file' ? (
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 pointer-events-none">
+          {icon}
+        </div>
+        <input
+          name={name}
+          type={type}
+          placeholder={placeholder}
+          required={required}
+          pattern={pattern}
+          min={min}
+          value={value}
+          onChange={onChange}
+          className="w-full border border-gray-300 rounded-md px-10 py-2 pr-3 focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-gray-400"
+        />
+      </div>
+    ) : (
+      <>
+        <input
+          name={name}
+          type="file"
+          accept="image/*"
+          onChange={onChange}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+        />
+        {preview && (
+          <img
+            src={preview}
+            alt="Preview"
+            className="mt-3 max-h-24 rounded-md object-contain"
+          />
+        )}
+      </>
+    )}
+  </div>
+);
 
 export default CustomFormModal;
