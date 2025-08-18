@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   RiDashboardLine,
   RiBusFill,
-  RiAdminFill,
   RiDriveLine,
   RiAirplayFill,
   RiLogoutBoxRLine,
@@ -34,7 +33,6 @@ const Sidebar = () => {
   const links = [
     { label: "داشبورد", icon: <RiDashboardLine />, to: "/" },
     { label: "بس ها", icon: <RiBusFill />, to: "/bus" },
-    // { label: "ادمین ها", icon: <RiAdminFill />, to: "/admins" },
     { label: "راننده ها", icon: <RiDriveLine />, to: "/driver" },
     { label: "سفرها", icon: <RiAirplayFill />, to: "/trips" },
   ];
@@ -43,7 +41,7 @@ const Sidebar = () => {
     <>
       {/* Toggle Button (Mobile Only) */}
       <button
-        className="fixed top-4 right-4 z-40 md:hidden bg-orange-500 p-2 rounded-md shadow text-white"
+        className="fixed top-4 right-4 z-40 md:hidden bg-slate-800 p-2 rounded-md shadow text-white"
         onClick={toggleSidebar}
         aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
       >
@@ -61,7 +59,7 @@ const Sidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 right-0 h-full w-64 bg-gradient-to-b from-orange-500 to-orange-600 text-white pt-20 shadow-xl z-30 transition-transform duration-300 transform
+        className={`fixed top-0 right-0 h-full w-64 bg-slate-800 text-white pt-20 shadow-xl z-30 transition-transform duration-300 transform
         ${isSidebarOpen ? "translate-x-0" : "translate-x-full"}
         md:translate-x-0 md:block`}
       >
@@ -77,7 +75,7 @@ const Sidebar = () => {
             {/* Company Name */}
             <h1 className="text-lg font-extrabold">{`شرکت ترانسپورتی ${company.name}`}</h1>
             {/* Username */}
-            <p className="text-sm text-orange-100 mt-1">
+            <p className="text-sm text-gray-300 mt-1">
               کاربر: <span className="font-semibold">{company.username}</span>
             </p>
           </div>
@@ -94,7 +92,7 @@ const Sidebar = () => {
         <div className="px-4 absolute bottom-6 w-full">
           <button
             onClick={handleLogout}
-            className="w-full flex justify-end items-center gap-3 hover:bg-orange-700 py-2 px-3 rounded transition font-semibold"
+            className="w-full flex justify-end items-center gap-3 hover:bg-slate-700 py-2 px-3 rounded transition font-semibold"
           >
             <span>خروج</span>
             <RiLogoutBoxRLine className="text-xl" />
@@ -108,7 +106,7 @@ const Sidebar = () => {
 const SidebarLink = ({ icon, label, to }) => (
   <Link
     to={to}
-    className="w-full flex justify-end items-center gap-3 hover:bg-orange-700 py-2 px-3 rounded transition text-right"
+    className="w-full flex justify-end items-center gap-3 hover:bg-slate-700 py-2 px-3 rounded transition text-right"
   >
     <span>{label}</span>
     <span className="text-lg">{icon}</span>

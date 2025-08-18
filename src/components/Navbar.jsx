@@ -137,12 +137,13 @@ const Navbar = () => {
 
       {/* Logo and brand */}
       <div className="flex items-center gap-4">
+         <span className="text-2xl font-bold text-orange-400">پنل مدیریت شرکت هایی ترانسپورتی</span>
         <img
           src={qlogo}
           alt="لوگو قاصد"
           className="w-10 h-10 rounded-full shadow"
         />
-        <span className="text-2xl font-bold text-orange-400">قاصد</span>
+       
       </div>
     </nav>
   );
