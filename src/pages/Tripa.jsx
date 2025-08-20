@@ -1,13 +1,18 @@
 // src/pages/Tripa.jsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import DashboardLayout from '../components/DashboardLayout';
-import CustomFormModal from '../components/modals/CustomFormModal';
-import CustomTable from '../components/CustomTable';
-import Loader from '../components/Loader';
-import { useToast } from '../components/ToastContext';
-import { FaMapMarkerAlt, FaMoneyBill, FaClock, FaBus, FaCalendarAlt } from 'react-icons/fa';
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import DashboardLayout from "../components/DashboardLayout";
+import CustomFormModal from "../components/modals/CustomFormModal";
+import CustomTable from "../components/CustomTable";
+import Loader from "../components/Loader";
+import { useToast } from "../components/ToastContext";
+import {
+  FaMapMarkerAlt,
+  FaClock,
+  FaBus,
+  FaCalendarAlt,
+} from "react-icons/fa";
 
 export default function Tripa() {
   const navigate = useNavigate();
@@ -15,50 +20,92 @@ export default function Tripa() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [trips, setTrips] = useState([]);
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState("");
+  const [editingTrip, setEditingTrip] = useState(null);
 
-  const token = sessionStorage.getItem('auth_token');
+  const token = sessionStorage.getItem("auth_token");
 
+  // Table columns
   const columns = [
-    { header: 'از', accessor: 'from' },
-    { header: 'به', accessor: 'to' },
-    { header: 'تاریخ', accessor: 'departure_date' },
-    { header: 'زمان حرکت', accessor: 'departure_time' },
-    { header: 'ترمینال حرکت', accessor: 'departure_terminal' },
-    { header: 'ترمینال رسید', accessor: 'arrival_terminal' },
+    { header: "از", accessor: "from" },
+    { header: "به", accessor: "to" },
+    { header: "تاریخ", accessor: "departure_date" },
+    { header: "زمان حرکت", accessor: "departure_time" },
+    { header: "ترمینال حرکت", accessor: "departure_terminal" },
+    { header: "ترمینال رسید", accessor: "arrival_terminal" },
   ];
 
-  const fields = useMemo(() => [
-    { label: 'از کجا', name: 'from', type: 'text', placeholder: 'مثال: کابل', icon: <FaMapMarkerAlt />, required: true },
-    { label: 'به کجا', name: 'to', type: 'text', placeholder: 'مثال: هرات', icon: <FaMapMarkerAlt />, required: true },
-    { label: 'زمان حرکت', name: 'departure_time', type: 'time', icon: <FaClock />, required: true },
-    { label: 'ترمینال حرکت', name: 'departure_terminal', type: 'text', icon: <FaBus />, required: true },
-    { label: 'ترمینال رسید', name: 'arrival_terminal', type: 'text', icon: <FaBus />, required: true },
-  ], []);
+  // Form fields
+  const fields = useMemo(
+    () => [
+      {
+        label: "از کجا",
+        name: "from",
+        type: "text",
+        placeholder: "مثال: کابل",
+        icon: <FaMapMarkerAlt />,
+        required: true,
+      },
+      {
+        label: "به کجا",
+        name: "to",
+        type: "text",
+        placeholder: "مثال: هرات",
+        icon: <FaMapMarkerAlt />,
+        required: true,
+      },
+      {
+        label: "زمان حرکت",
+        name: "departure_time",
+        type: "time",
+        icon: <FaClock />,
+        required: true,
+      },
+      {
+        label: "ترمینال حرکت",
+        name: "departure_terminal",
+        type: "text",
+        icon: <FaBus />,
+        required: true,
+      },
+      {
+        label: "ترمینال رسید",
+        name: "arrival_terminal",
+        type: "text",
+        icon: <FaBus />,
+        required: true,
+      },
+    ],
+    []
+  );
 
-  // Fetch trips from API
+  // Fetch trips
   const fetchTrips = async () => {
     if (!token) {
-      toast.error('توکن معتبر موجود نیست. لطفاً دوباره وارد شوید.');
+      toast.error("توکن معتبر موجود نیست. لطفاً دوباره وارد شوید.");
       setIsLoading(false);
       return;
     }
 
     try {
-      const res = await axios.get('http://127.0.0.1:8001/api/trips', {
+      const res = await axios.get("http://127.0.0.1:8001/api/public/trips", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const formattedTrips = res.data.map(trip => ({
+      const formattedTrips = res.data.map((trip) => ({
         ...trip,
-        departure_date: new Intl.DateTimeFormat('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(trip.departure_date)),
-        departure_time: trip.departure_time, // keep as HH:mm
+        departure_date_raw: trip.departure_date, // raw for edit
+        departure_date: new Intl.DateTimeFormat("fa-IR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(new Date(trip.departure_date)),
       }));
 
       setTrips(formattedTrips);
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || 'خطا در دریافت لیست سفرها.');
+      toast.error(err.response?.data?.message || "خطا در دریافت لیست سفرها.");
     } finally {
       setIsLoading(false);
     }
@@ -68,33 +115,97 @@ export default function Tripa() {
     fetchTrips();
   }, []);
 
-  // Add new trip
+  // Add trip
   const handleAddTrip = async (formData) => {
-    if (!token) {
-      toast.error('توکن معتبر موجود نیست. لطفاً دوباره وارد شوید.');
-      return;
-    }
-
-    if (!selectedDate) {
-      toast.error('تاریخ سفر را وارد کنید.');
-      return;
-    }
+    if (!token) return toast.error("توکن معتبر موجود نیست.");
+    if (!selectedDate) return toast.error("تاریخ سفر را وارد کنید.");
 
     try {
       const payload = { ...formData, departure_date: selectedDate };
-      const res = await axios.post('http://127.0.0.1:8001/api/trips', payload, {
+      const res = await axios.post("http://127.0.0.1:8001/api/trips", payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const newTrip = res.data.trip;
-      newTrip.departure_date = new Intl.DateTimeFormat('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(newTrip.departure_date));
+      newTrip.departure_date_raw = newTrip.departure_date;
+      newTrip.departure_date = new Intl.DateTimeFormat("fa-IR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date(newTrip.departure_date));
 
-      setTrips(prev => [...prev, newTrip]);
+      setTrips((prev) => [...prev, newTrip]);
       setIsModalOpen(false);
-      toast.success('سفر جدید با موفقیت اضافه شد.');
+      setSelectedDate("");
+      toast.success("سفر جدید با موفقیت اضافه شد.");
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || 'خطا در ایجاد سفر.');
+      toast.error(err.response?.data?.message || "خطا در ایجاد سفر.");
+    }
+  };
+
+  // Edit trip (open modal with prefilled values)
+  const handleEditTrip = (trip) => {
+    setEditingTrip(trip);
+    setSelectedDate(trip.departure_date_raw || "");
+    setIsModalOpen(true);
+  };
+
+  // Update trip
+  const handleUpdateTrip = async (formData) => {
+    if (!token) return toast.error("توکن معتبر موجود نیست.");
+    if (!editingTrip) return;
+
+    try {
+      const payload = { ...formData, departure_date: selectedDate };
+      const res = await axios.put(
+        `http://127.0.0.1:8001/api/trips/${editingTrip.id}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const updatedTrip = res.data.trip;
+      updatedTrip.departure_date_raw = updatedTrip.departure_date;
+      updatedTrip.departure_date = new Intl.DateTimeFormat("fa-IR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date(updatedTrip.departure_date));
+
+      setTrips((prev) =>
+        prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
+      );
+      setIsModalOpen(false);
+      setEditingTrip(null);
+      setSelectedDate("");
+      toast.success("سفر با موفقیت ویرایش شد.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "خطا در ویرایش سفر.");
+    }
+  };
+
+  // Delete trip
+  const handleDeleteTrip = async (trip) => {
+    if (!trip || !trip.id) return toast.error("شناسه سفر معتبر نیست.");
+    if (!window.confirm("آیا مطمئن هستید که می‌خواهید این سفر را حذف کنید؟"))
+      return;
+
+    if (!token) {
+      toast.error("توکن معتبر موجود نیست. لطفاً دوباره وارد شوید.");
+      return;
+    }
+
+    try {
+      await axios.delete(`http://127.0.0.1:8001/api/trips/${trip.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setTrips((prev) => prev.filter((t) => t.id !== trip.id));
+      toast.success("سفر با موفقیت حذف شد.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "خطا در حذف سفر.");
     }
   };
 
@@ -106,7 +217,11 @@ export default function Tripa() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold text-[#0B2A5B]">لیست سفرها</h1>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsModalOpen(true);
+              setEditingTrip(null);
+              setSelectedDate("");
+            }}
             className="bg-[#F37021] text-white px-4 py-2 rounded hover:bg-orange-600 transition"
           >
             افزودن سفر جدید
@@ -116,17 +231,24 @@ export default function Tripa() {
         <CustomTable
           data={trips}
           columns={columns}
-          onView={(trip) => navigate('/tripdetails', { state: trip })}
+          onView={(trip) => navigate("/tripdetails", { state: trip })}
+          onEdit={handleEditTrip}
+          onDelete={handleDeleteTrip}
         />
 
-        {/* Always render the modal to prevent input locking */}
+        {/* Modal for Add/Edit */}
         <CustomFormModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onAdd={handleAddTrip}
-          title="افزودن سفر جدید"
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingTrip(null);
+            setSelectedDate("");
+          }}
+          onSubmit={editingTrip ? handleUpdateTrip : handleAddTrip}
+          title={editingTrip ? "ویرایش سفر" : "افزودن سفر جدید"}
           titleIcon={<FaBus />}
           fields={fields}
+          initialData={editingTrip || {}}
         >
           <div className="sm:col-span-2">
             <label className="block mb-1 font-semibold text-[#0B2A5B] flex items-center gap-2">

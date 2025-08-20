@@ -68,7 +68,11 @@ const Sidebar = () => {
           <div className="px-6 flex flex-col items-center text-center mb-6">
             {/* Logo */}
             <img
-              src={company.logo_url || "/default-avatar.png"}
+              src={
+                company.logo_url
+                  ? `http://127.0.0.1:8000/storage/${company.logo_url}`
+                  : "/default-avatar.png"
+              }
               alt="لوگو شرکت"
               className="w-16 h-16 rounded-full shadow-lg border-2 border-white mb-3"
             />

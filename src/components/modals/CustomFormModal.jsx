@@ -4,12 +4,11 @@ import React, { useState, useEffect } from 'react';
 const CustomFormModal = ({
   isOpen,
   onClose,
-  onAdd,
-  onUpdate,
+  onSubmit,
   title = 'افزودن مورد جدید',
   titleIcon,
   fields = [],
-  initialData = null, // for editing
+  initialData = null,
   children,
 }) => {
   const [formData, setFormData] = useState({});
@@ -18,16 +17,16 @@ const CustomFormModal = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const initialFormValues = fields.reduce((acc, field) => {
+    const initialFormValues = {};
+    fields.forEach((field) => {
       if (field.type === 'file') {
-        acc[field.name] = null;
-        acc[`${field.name}Preview`] =
+        initialFormValues[field.name] = null;
+        initialFormValues[`${field.name}Preview`] = 
           initialData && initialData[field.name] ? initialData[field.name] : '';
       } else {
-        acc[field.name] = initialData ? initialData[field.name] || '' : '';
+        initialFormValues[field.name] = initialData ? initialData[field.name] || '' : '';
       }
-      return acc;
-    }, {});
+    });
 
     setFormData(initialFormValues);
   }, [isOpen, initialData, fields]);
@@ -52,11 +51,7 @@ const CustomFormModal = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (initialData && onUpdate) {
-        await onUpdate(formData);
-      } else if (onAdd) {
-        await onAdd(formData);
-      }
+      await onSubmit(formData);
       onClose();
     } catch (err) {
       console.error(err);

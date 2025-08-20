@@ -11,7 +11,8 @@ const CustomTable = ({ columns = [], data = [], title = 'جدول اطلاعات
         <div className="flex items-center gap-3">
           <img src={qlogo} alt="Qased Logo" className="w-10 h-10 rounded-full object-cover" />
           <div>
-            <h2 className="text-xl font-bold text-[#0B2A5B]">{title}</h2>
+            <h2 className="text-xl font-bold text-[#0B2A5B]">{title}
+            </h2>
             <p className="text-sm text-gray-500">مدیریت داده‌های {title}</p>
           </div>
         </div>
@@ -50,27 +51,33 @@ const CustomTable = ({ columns = [], data = [], title = 'جدول اطلاعات
                 ))}
                 <td className="px-4 py-3 text-right">
                   <div className="flex gap-2 justify-start items-center">
-                    <button
-                      className="text-[#F37021] hover:text-orange-600 transition"
-                      title="مشاهده جزئیات"
-                      onClick={() => onView && onView(row)}
-                    >
-                      <MdVisibility size={20} />
-                    </button>
-                    <button
-                      className="text-[#F37021] hover:text-orange-600 transition"
-                      title="ویرایش"
-                      onClick={() => onEdit && onEdit(row)}
-                    >
-                      <MdEdit size={20} />
-                    </button>
-                    <button
-                      className="text-[#F37021] hover:text-orange-600 transition"
-                      title="حذف"
-                      onClick={() => onDelete && onDelete(row.id)}
-                    >
-                      <MdDelete size={20} />
-                    </button>
+                    {onView && (
+                      <button
+                        className="text-[#F37021] hover:text-orange-600 transition"
+                        title="مشاهده جزئیات"
+                        onClick={() => onView(row)}
+                      >
+                        <MdVisibility size={20} />
+                      </button>
+                    )}
+                    {onEdit && (
+                      <button
+                        className="text-[#F37021] hover:text-orange-600 transition"
+                        title="ویرایش"
+                        onClick={() => onEdit(row)}
+                      >
+                        <MdEdit size={20} />
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        className="text-[#F37021] hover:text-orange-600 transition"
+                        title="حذف"
+                        onClick={() => onDelete(row)}
+                      >
+                        <MdDelete size={20} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
