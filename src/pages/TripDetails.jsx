@@ -43,7 +43,7 @@ export default function TripDetails() {
 
         {/* Seat Layout */}
         <h2 className="text-xl font-bold text-[#0B2A5B] mb-4">انتخاب صندلی / مشاهده وضعیت</h2>
-        <Sets selectedSeat={selectedSeat} setSelectedSeat={setSelectedSeat} />
+  
 
         {/* Assign Driver Button */}
         <div className="mt-6">

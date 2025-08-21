@@ -11,6 +11,7 @@ import Driver from "./pages/Driver";
 import Tripa from "./pages/Tripa";
 import ProtectedRoute from "./components/ProtectedRoutes";
 import TripDetails from "./pages/TripDetails";
+import ReadyTrips from "./pages/ReadyTrips";
 
 function App() {
   return (
@@ -93,6 +94,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+         <Route
+          path="/chalans"
+          element={
+            <ProtectedRoute>
+              <ReadyTrips/>
+            </ProtectedRoute>
+          }
+        />
+
+
+
 
 
       </Routes>

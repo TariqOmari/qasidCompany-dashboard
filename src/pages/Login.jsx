@@ -21,7 +21,7 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      const res = await axios.post("http://127.0.0.1:8001/api/login", {
+      const res = await axios.post("http://127.0.0.1:8000/api/companies/login", {
         username,
         password,
       });
@@ -123,12 +123,7 @@ export default function Login() {
           </form>
 
           {/* Link */}
-          <div className="text-sm text-center text-gray-600 mt-6">
-            حساب ندارید؟{" "}
-            <a href="#" className="text-slate-800 font-semibold hover:underline">
-              ثبت‌نام کنید
-            </a>
-          </div>
+       
         </div>
       </div>
     </div>

@@ -35,6 +35,7 @@ const Sidebar = () => {
     { label: "بس ها", icon: <RiBusFill />, to: "/bus" },
     { label: "راننده ها", icon: <RiDriveLine />, to: "/driver" },
     { label: "سفرها", icon: <RiAirplayFill />, to: "/trips" },
+     { label: "چالان هایی شرکت", icon: <RiAirplayFill />, to: "/chalans" },
   ];
 
   return (

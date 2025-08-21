@@ -10,8 +10,8 @@ const Home = () => {
   return (
     <DashboardLayout>
       <div className="p-6">
-        <Cards />
-        <DashboardCharts />
+
+     
         
 
 

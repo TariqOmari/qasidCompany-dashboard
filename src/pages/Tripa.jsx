@@ -1,4 +1,3 @@
-// src/pages/Tripa.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -7,12 +6,10 @@ import CustomFormModal from "../components/modals/CustomFormModal";
 import CustomTable from "../components/CustomTable";
 import Loader from "../components/Loader";
 import { useToast } from "../components/ToastContext";
-import {
-  FaMapMarkerAlt,
-  FaClock,
-  FaBus,
-  FaCalendarAlt,
-} from "react-icons/fa";
+import { FaMapMarkerAlt, FaClock, FaBus, FaCalendarAlt } from "react-icons/fa";
+
+// ✅ Vite: use import.meta.env
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function Tripa() {
   const navigate = useNavigate();
@@ -88,7 +85,7 @@ export default function Tripa() {
     }
 
     try {
-      const res = await axios.get("http://127.0.0.1:8001/api/public/trips", {
+      const res = await axios.get(`${API_BASE_URL}/api/public/trips`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -122,7 +119,7 @@ export default function Tripa() {
 
     try {
       const payload = { ...formData, departure_date: selectedDate };
-      const res = await axios.post("http://127.0.0.1:8001/api/trips", payload, {
+      const res = await axios.post(`${API_BASE_URL}/api/trips`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -159,7 +156,7 @@ export default function Tripa() {
     try {
       const payload = { ...formData, departure_date: selectedDate };
       const res = await axios.put(
-        `http://127.0.0.1:8001/api/trips/${editingTrip.id}`,
+        `${API_BASE_URL}/api/trips/${editingTrip.id}`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -197,7 +194,7 @@ export default function Tripa() {
     }
 
     try {
-      await axios.delete(`http://127.0.0.1:8001/api/trips/${trip.id}`, {
+      await axios.delete(`${API_BASE_URL}/api/trips/${trip.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
