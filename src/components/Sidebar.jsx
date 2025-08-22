@@ -8,12 +8,13 @@ import {
   RiCloseLine,
   RiMenu3Line,
 } from "react-icons/ri";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 const Sidebar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [company, setCompany] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -35,7 +36,7 @@ const Sidebar = () => {
     { label: "بس ها", icon: <RiBusFill />, to: "/bus" },
     { label: "راننده ها", icon: <RiDriveLine />, to: "/driver" },
     { label: "سفرها", icon: <RiAirplayFill />, to: "/trips" },
-     { label: "چالان هایی شرکت", icon: <RiAirplayFill />, to: "/chalans" },
+    { label: "چالان هایی شرکت", icon: <RiAirplayFill />, to: "/chalans" },
   ];
 
   return (
@@ -89,7 +90,11 @@ const Sidebar = () => {
         {/* Nav items */}
         <nav className="flex flex-col gap-1 px-4 font-medium text-base">
           {links.map((link, idx) => (
-            <SidebarLink key={idx} {...link} />
+            <SidebarLink
+              key={idx}
+              {...link}
+              active={location.pathname === link.to}
+            />
           ))}
         </nav>
 
@@ -108,10 +113,15 @@ const Sidebar = () => {
   );
 };
 
-const SidebarLink = ({ icon, label, to }) => (
+const SidebarLink = ({ icon, label, to, active }) => (
   <Link
     to={to}
-    className="w-full flex justify-end items-center gap-3 hover:bg-slate-700 py-2 px-3 rounded transition text-right"
+    className={`w-full flex justify-end items-center gap-3 py-2 px-3 rounded-lg transition-all duration-200 text-right
+      ${
+        active
+          ? "bg-slate-900 text-white font-semibold shadow-md border-r-4 border-indigo-400"
+          : "hover:bg-slate-700 hover:text-white"
+      }`}
   >
     <span>{label}</span>
     <span className="text-lg">{icon}</span>
