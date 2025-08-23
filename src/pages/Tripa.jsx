@@ -218,6 +218,7 @@ export default function Tripa() {
     { header: "زمان حرکت", accessor: "departure_time_ampm" },
     { header: "ترمینال حرکت", accessor: "departure_terminal" },
     { header: "ترمینال رسید", accessor: "arrival_terminal" },
+     { header: "قیمت (افغانی)", accessor: "price" } // ✅ Added price
   ];
 
   // Form fields
@@ -260,6 +261,17 @@ export default function Tripa() {
         icon: <FaBus />,
         required: true,
       },
+
+      {
+      label: "قیمت (افغانی)",
+      name: "price",
+      type: "number",
+      placeholder: "مثال: 500",
+      icon: <FaBus />,
+      required: true, // ✅ Price is required
+    },
+
+
     ],
     []
   );
@@ -297,12 +309,14 @@ export default function Tripa() {
     // Validate Jalali date
     if (!selectedJalaliDate || !selectedJalaliDate.year || !selectedJalaliDate.month || !selectedJalaliDate.day) {
       return toast.error("لطفاً تاریخ سفر را انتخاب کنید.");
+      
     }
 
     try {
       const payload = {
         ...formData,
-        departure_date_jalali: selectedJalaliDate
+        departure_date_jalali: selectedJalaliDate,
+         price: Number(formData.price), // ✅ Ensure price is numeric
       };
 
       const res = await axios.post(`${API_BASE_URL}/api/trips`, payload, {
@@ -337,7 +351,8 @@ export default function Tripa() {
     try {
       const payload = {
         ...formData,
-        departure_date_jalali: selectedJalaliDate
+        departure_date_jalali: selectedJalaliDate,
+        price: Number(formData.price),
       };
 
       const res = await axios.put(

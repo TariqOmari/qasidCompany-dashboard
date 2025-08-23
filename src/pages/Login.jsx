@@ -14,6 +14,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   const toast = useToast();
+  const Login_Base_URL = import.meta.env.VITE_API_BASE_URL_Login;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +22,7 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      const res = await axios.post("http://127.0.0.1:8000/api/companies/login", {
+      const res = await axios.post(`${Login_Base_URL}`, {
         username,
         password,
       });
