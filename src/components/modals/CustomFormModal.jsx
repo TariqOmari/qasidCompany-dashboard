@@ -8,124 +8,136 @@ const CustomFormModal = ({
   titleIcon,
   fields = [],
   initialData = null,
+
+  // ✅ Passed from parent
+  existingBuses = [],
+  editingBus = null,
+  existingDrivers = [],
+  editingDriver = null,
+
   children,
 }) => {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
+  const [isValid, setIsValid] = useState(false);
 
-  // Initialize formData when modal opens or initialData changes
-  useEffect(() => {
-    if (!isOpen) {
-      setFormData({});
-      setErrors({});
-      return;
-    }
+ useEffect(() => {
+  if (!isOpen) return;
 
-    const initialFormValues = {};
-    fields.forEach((field) => {
-      if (field.type === 'file') {
-        initialFormValues[field.name] = null;
-        initialFormValues[`${field.name}Preview`] =
-          initialData && initialData[field.name] ? initialData[field.name] : '';
-      } else {
-        initialFormValues[field.name] = initialData
-          ? initialData[field.name] || ''
-          : '';
-      }
-    });
+  // Only initialize form once when modal opens
+  const initialFormValues = {};
+  fields.forEach((field) => {
+    initialFormValues[field.name] = initialData?.[field.name] ?? '';
+  });
 
-    setFormData(initialFormValues);
-    setErrors({});
-  }, [isOpen, initialData, fields]);
+  setFormData(initialFormValues);
+  setErrors({});
+  setIsValid(false);
+}, [isOpen]); // <-- removed initialData & fields from dependency
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
 
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    if (files && files[0]) {
-      const file = files[0];
-      setFormData((prev) => ({
-        ...prev,
-        [name]: file,
-        [`${name}Preview`]: URL.createObjectURL(file),
-      }));
-    }
-  };
-
-  const validateForm = () => {
+  const validateForm = (data = formData) => {
     const newErrors = {};
 
+    // ✅ Required fields
     fields.forEach((field) => {
-      if (field.required && !formData[field.name]) {
+      if (field.required && !data[field.name]) {
         newErrors[field.name] = `${field.label} الزامی است`;
       }
     });
 
+    // ✅ Bus duplicate checks
+    if (data.busNo) {
+      const exists = existingBuses.some(
+        (b) => b.bus_no === data.busNo && b.id !== editingBus?.id
+      );
+      if (exists) newErrors.busNo = 'این شماره بس قبلاً ثبت شده است';
+    }
+    if (data.numberPlate) {
+      const exists = existingBuses.some(
+        (b) =>
+          b.number_plate === data.numberPlate && b.id !== editingBus?.id
+      );
+      if (exists) newErrors.numberPlate = 'این پلاک قبلاً ثبت شده است';
+    }
+    if (data.licenseNumber) {
+      const exists = existingBuses.some(
+        (b) =>
+          b.license_number === data.licenseNumber &&
+          b.id !== editingBus?.id
+      );
+      if (exists)
+        newErrors.licenseNumber = 'این شماره مجوز قبلاً ثبت شده است';
+    }
+
+    // ✅ Driver duplicate checks
+    if (data.phone) {
+      const exists = existingDrivers.some(
+        (d) => d.phone === data.phone && d.id !== editingDriver?.id
+      );
+      if (exists) newErrors.phone = 'این شماره تلفن قبلاً ثبت شده است';
+    }
+    if (data.license_number) {
+      const exists = existingDrivers.some(
+        (d) =>
+          d.license_number === data.license_number &&
+          d.id !== editingDriver?.id
+      );
+      if (exists)
+        newErrors.license_number = 'این شماره گواهینامه قبلاً ثبت شده است';
+    }
+
     setErrors(newErrors);
+    setIsValid(Object.keys(newErrors).length === 0);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const updated = { ...formData, [name]: value };
+    setFormData(updated);
+    validateForm(updated);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
-      const submitData = { ...formData };
-      fields.forEach((field) => {
-        if (field.type === 'file') {
-          delete submitData[`${field.name}Preview`];
-        }
-      });
-
       if (onSubmit) {
-        await onSubmit(submitData);
+        await onSubmit(formData);
       }
       onClose();
     } catch (err) {
       console.error('Modal submit error:', err);
-      if (err.response?.data?.errors) {
-        setErrors(err.response.data.errors);
-      }
     }
   };
 
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black transition-all duration-300
-        ${isOpen ? 'bg-opacity-40 visible opacity-100' : 'bg-opacity-0 invisible opacity-0 pointer-events-none'}`}
+        ${
+          isOpen
+            ? 'bg-opacity-40 visible opacity-100'
+            : 'bg-opacity-0 invisible opacity-0 pointer-events-none'
+        }`}
     >
       <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6 font-vazir text-right max-h-[90vh] overflow-y-auto">
-        {/* Title */}
         <h2 className="text-2xl font-bold mb-6 text-[#0B2A5B] flex items-center gap-2 justify-end">
           {title}
           {titleIcon && <span className="text-[#F37021]">{titleIcon}</span>}
         </h2>
 
-        {/* Form */}
         <form
           onSubmit={handleSubmit}
           className="grid grid-cols-1 sm:grid-cols-2 gap-6"
         >
           {fields.map((field) => (
-            <div
-              key={field.name}
-              className={field.type === 'file' ? 'sm:col-span-2' : ''}
-            >
+            <div key={field.name}>
               <InputWithIcon
                 {...field}
-                value={field.type === 'file' ? undefined : formData[field.name] || ''}
-                onChange={field.type === 'file' ? handleFileChange : handleChange}
-                preview={formData[`${field.name}Preview`]}
+                value={formData[field.name] || ''}
+                onChange={handleChange}
                 error={errors[field.name]}
               />
             </div>
@@ -133,7 +145,6 @@ const CustomFormModal = ({
 
           {children && <div className="sm:col-span-2">{children}</div>}
 
-          {/* Footer buttons */}
           <div className="sm:col-span-2 flex justify-between items-center mt-6">
             <button
               type="button"
@@ -144,7 +155,12 @@ const CustomFormModal = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#F37021] text-white rounded hover:bg-orange-600 transition"
+              disabled={!isValid}
+              className={`px-4 py-2 rounded transition text-white ${
+                isValid
+                  ? 'bg-[#F37021] hover:bg-orange-600'
+                  : 'bg-gray-400 cursor-not-allowed'
+              }`}
             >
               {initialData ? 'به‌روزرسانی' : 'افزودن'}
             </button>
@@ -155,7 +171,7 @@ const CustomFormModal = ({
   );
 };
 
-// Input component with RTL support
+// Input with icon + error
 const InputWithIcon = ({
   icon,
   label,
@@ -163,12 +179,10 @@ const InputWithIcon = ({
   type = 'text',
   placeholder,
   required = false,
-  pattern,
-  min,
   value,
   onChange,
-  preview,
   error,
+  options = [],
 }) => (
   <div className="text-right">
     <label className="block mb-1 font-semibold text-[#0B2A5B] flex items-center gap-2 justify-end">
@@ -177,48 +191,40 @@ const InputWithIcon = ({
       {icon && <span className="text-orange-500">{icon}</span>}
     </label>
 
-    {type !== 'file' ? (
-      <div className="relative">
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-500 pointer-events-none">
-          {icon}
-        </div>
-        <input
-          name={name}
-          type={type}
-          placeholder={placeholder}
-          required={required}
-          pattern={pattern}
-          min={min}
-          value={value}
-          onChange={onChange}
-          dir="rtl"
-          className={`w-full border rounded-md py-2 pr-10 pl-3 text-right focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-gray-400 ${
-            error ? 'border-red-500' : 'border-gray-300'
-          }`}
-        />
-      </div>
+    {type === 'select' ? (
+      <select
+        name={name}
+        required={required}
+        value={value}
+        onChange={onChange}
+        dir="rtl"
+        className={`w-full border rounded-md py-2 pr-10 pl-3 text-right focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+          error ? 'border-red-500' : 'border-gray-300'
+        }`}
+      >
+        <option value="">{placeholder || 'لطفا انتخاب کنید'}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     ) : (
-      <>
-        <input
-          name={name}
-          type="file"
-          accept="image/*"
-          onChange={onChange}
-          className={`w-full border rounded-md px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-            error ? 'border-red-500' : 'border-gray-300'
-          }`}
-        />
-        {preview && (
-          <img
-            src={preview}
-            alt="Preview"
-            className="mt-3 max-h-24 rounded-md object-contain"
-          />
-        )}
-      </>
+      <input
+        name={name}
+        type={type}
+        placeholder={placeholder}
+        required={required}
+        value={value}
+        onChange={onChange}
+        dir="rtl"
+        className={`w-full border rounded-md py-2 pr-10 pl-3 text-right focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+          error ? 'border-red-500 animate-shake' : 'border-gray-300'
+        }`}
+      />
     )}
 
-    {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+    {error && <p className="text-red-600 font-bold text-sm mt-1">{error}</p>}
   </div>
 );
 

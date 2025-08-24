@@ -16,7 +16,8 @@ const DRIVER_API = `${API_BASE_URL}/api/drivers`;
 const Driver = () => {
   const toast = useToast();
   const [drivers, setDrivers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Loading for fetching
+  const [modalLoading, setModalLoading] = useState(false); // Loading for add/edit
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState(null);
 
@@ -38,7 +39,7 @@ const Driver = () => {
   }, []);
 
   const handleSaveDriver = async (data) => {
-    setLoading(true);
+    setModalLoading(true);
     try {
       const submitData = { ...data, father_name: data.father_name || '' };
       
@@ -51,14 +52,15 @@ const Driver = () => {
         await axios.post(DRIVER_API, submitData);
         toast.success('راننده با موفقیت اضافه شد!');
       }
-      
-      fetchDrivers();
+
+      await fetchDrivers();
       setEditingDriver(null);
       setIsModalOpen(false);
     } catch (err) {
       console.error('Error saving driver:', err);
       toast.error('خطا در ذخیره راننده: ' + (err.response?.data?.message || err.message));
-      setLoading(false);
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -68,10 +70,11 @@ const Driver = () => {
     try {
       await axios.delete(`${DRIVER_API}/${id}`);
       toast.success('راننده با موفقیت حذف شد!');
-      fetchDrivers();
+      await fetchDrivers();
     } catch (err) {
       console.error('Error deleting driver:', err);
       toast.error('خطا در حذف راننده: ' + (err.response?.data?.message || err.message));
+    } finally {
       setLoading(false);
     }
   };
@@ -90,7 +93,6 @@ const Driver = () => {
     { name: 'license_number', label: 'شماره گواهینامه', type: 'text', placeholder: 'شماره گواهینامه', required: true },
   ];
 
-  // Show only loader if any operation is happening
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -122,14 +124,17 @@ const Driver = () => {
         onDelete={(driver) => handleDeleteDriver(driver.id)}
       />
 
-      {/* FIXED: Use onSubmit instead of onAdd/onUpdate */}
+      {/* Modal with loader */}
       <CustomFormModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingDriver(null); }}
-        onSubmit={handleSaveDriver}  // ✅ Changed to onSubmit
+        onSubmit={handleSaveDriver}
         initialData={editingDriver}
         title={editingDriver ? 'ویرایش راننده' : 'افزودن راننده'}
         fields={fields}
+        existingDrivers={drivers}
+        editingDriver={editingDriver}
+        isLoading={modalLoading} // ✅ Pass modal loader
       />
     </DashboardLayout>
   );

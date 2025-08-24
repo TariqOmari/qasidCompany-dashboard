@@ -222,59 +222,57 @@ export default function Tripa() {
   ];
 
   // Form fields
-  const fields = useMemo(
-    () => [
-      {
-        label: "از کجا",
-        name: "from",
-        type: "text",
-        placeholder: "مثال: کابل",
-        icon: <FaMapMarkerAlt />,
-        required: true,
-      },
-      {
-        label: "به کجا",
-        name: "to",
-        type: "text",
-        placeholder: "مثال: هرات",
-        icon: <FaMapMarkerAlt />,
-        required: true,
-      },
-      {
-        label: "زمان حرکت",
-        name: "departure_time",
-        type: "time",
-        icon: <FaClock />,
-        required: true,
-      },
-      {
-        label: "ترمینال حرکت",
-        name: "departure_terminal",
-        type: "text",
-        icon: <FaBus />,
-        required: true,
-      },
-      {
-        label: "ترمینال رسید",
-        name: "arrival_terminal",
-        type: "text",
-        icon: <FaBus />,
-        required: true,
-      },
-
-      {
+// Form fields
+const fields = useMemo(
+  () => [
+    {
+      label: "به کجا",   // <-- TO stays in the first column (right)
+      name: "to",
+      type: "text",
+      placeholder: "مثال: هرات",
+      icon: <FaMapMarkerAlt />,
+      required: true,
+    },
+    {
+      label: "از کجا",   // <-- FROM goes second column (left)
+      name: "from",
+      type: "text",
+      placeholder: "مثال: کابل",
+      icon: <FaMapMarkerAlt />,
+      required: true,
+    },
+    {
+      label: "زمان حرکت",
+      name: "departure_time",
+      type: "time",
+      icon: <FaClock />,
+      required: true,
+    },
+    {
+      label: "ترمینال حرکت",
+      name: "departure_terminal",
+      type: "text",
+      icon: <FaBus />,
+      required: true,
+    },
+    {
+      label: "ترمینال رسید",
+      name: "arrival_terminal",
+      type: "text",
+      icon: <FaBus />,
+      required: true,
+    },
+    {
       label: "قیمت (افغانی)",
       name: "price",
       type: "number",
       placeholder: "مثال: 500",
       icon: <FaBus />,
-      required: true, // ✅ Price is required
+      required: true,
     },
-
-
-    ],
-    []
-  );
+  ],
+  []
+);
 
   // Fetch trips
   const fetchTrips = async () => {

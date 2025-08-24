@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CustomTable from '../components/CustomTable';
 import DashboardLayout from '../components/DashboardLayout';
+import Loader from '../components/Loader';
 import { RiBusFill, RiNumbersFill } from 'react-icons/ri';
 import CustomFormModal from '../components/modals/CustomFormModal';
 import { useToast } from '../components/ToastContext';
 
-// ✅ Vite: use import.meta.env
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const columns = [
@@ -23,19 +23,18 @@ function Buses() {
   const [busesData, setBusesData] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBus, setEditingBus] = useState(null);
+  const [loading, setLoading] = useState(false); // ✅ loader state
   const toast = useToast();
 
-  // Bus types for dropdown
   const busTypes = [
     { value: 'vip', label: 'VIP' },
-    { value: 'standard', label: 'استاندارد' },
-    { value: 'luxury', label: 'لوکس' },
-    { value: 'economy', label: 'اقتصادی' }
+    { value: 'standard', label: 'استاندارد' }
   ];
 
   // Fetch buses
   useEffect(() => {
     const fetchBuses = async () => {
+      setLoading(true); // show loader
       try {
         const token = sessionStorage.getItem('auth_token');
         if (!token) {
@@ -48,61 +47,27 @@ function Buses() {
         });
 
         setBusesData(response.data);
-        toast.success('لیست بس‌ها دریافت شد.');
       } catch (error) {
         console.error('Error fetching buses:', error);
         toast.error('دریافت لیست بس‌ها ناموفق بود.');
+      } finally {
+        setLoading(false); // hide loader
       }
     };
 
     fetchBuses();
   }, []);
 
-  // Form fields
   const fields = [
-    { 
-      name: 'busNo', 
-      label: 'شماره بس', 
-      placeholder: 'مثلا BUS-101', 
-      icon: <RiBusFill />, 
-      type: 'text', 
-      required: true 
-    },
-    { 
-      name: 'numberPlate', 
-      label: 'پلاک بس', 
-      placeholder: 'مثلا KBL-123', 
-      icon: <RiNumbersFill />, 
-      type: 'text', 
-      required: true 
-    },
-    { 
-      name: 'licenseNumber', 
-      label: 'شماره مجوز', 
-      placeholder: 'مثلا LIC-98765', 
-      icon: <RiNumbersFill />, 
-      type: 'text', 
-      required: true 
-    },
-    { 
-      name: 'type', 
-      label: 'نوع بس', 
-      type: 'select', 
-      options: busTypes,
-      required: true 
-    },
-    { 
-      name: 'model', 
-      label: 'مدل بس', 
-      placeholder: 'مثلا 580', 
-      icon: <RiBusFill />, 
-      type: 'text', 
-      required: true 
-    },
+    { name: 'busNo', label: 'شماره بس', placeholder: 'مثلا BUS-101', icon: <RiBusFill />, type: 'text', required: true },
+    { name: 'numberPlate', label: 'پلاک بس', placeholder: 'مثلا KBL-123', icon: <RiNumbersFill />, type: 'text', required: true },
+    { name: 'licenseNumber', label: 'شماره مجوز', placeholder: 'مثلا LIC-98765', icon: <RiNumbersFill />, type: 'text', required: true },
+    { name: 'type', label: 'نوع بس', type: 'select', options: busTypes, required: true },
+    { name: 'model', label: 'مدل بس', placeholder: 'مثلا 580', icon: <RiBusFill />, type: 'text', required: true },
   ];
 
-  // Save (Create or Update)
   const handleSaveBus = async (formData) => {
+    setLoading(true); // show loader
     try {
       const token = sessionStorage.getItem('auth_token');
       if (!token) {
@@ -119,24 +84,20 @@ function Buses() {
       };
 
       if (editingBus) {
-        // Update
         const response = await axios.put(
           `${API_BASE_URL}/api/buses/${editingBus.id}`,
           payload,
           { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
         );
-
-        setBusesData((prev) => prev.map((bus) => (bus.id === editingBus.id ? response.data : bus)));
+        setBusesData(prev => prev.map(bus => bus.id === editingBus.id ? response.data : bus));
         toast.success('بس با موفقیت ویرایش شد.');
       } else {
-        // Create
         const response = await axios.post(
           `${API_BASE_URL}/api/buses`,
           payload,
           { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
         );
-
-        setBusesData((prev) => [...prev, response.data]);
+        setBusesData(prev => [...prev, response.data]);
         toast.success('بس با موفقیت ایجاد شد.');
       }
 
@@ -145,44 +106,42 @@ function Buses() {
     } catch (error) {
       console.error('Error saving bus:', error);
       toast.error('ذخیره‌سازی ناموفق بود.');
+    } finally {
+      setLoading(false); // hide loader
     }
   };
 
-  // Delete
   const handleDeleteBus = async (id) => {
-    console.log('Deleting bus ID:', id);
     if (!window.confirm('آیا مطمئن هستید؟')) return;
 
+    setLoading(true); // show loader
     try {
       const token = sessionStorage.getItem('auth_token');
-      const response = await axios.delete(`${API_BASE_URL}/api/buses/${id}`, {
+      await axios.delete(`${API_BASE_URL}/api/buses/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Delete response:', response);
-      setBusesData((prev) => prev.filter((bus) => bus.id !== id));
+      setBusesData(prev => prev.filter(bus => bus.id !== id));
       toast.success('بس با موفقیت حذف شد.');
     } catch (err) {
       console.error('Delete error:', err.response || err);
       toast.error('حذف بس ناموفق بود.');
+    } finally {
+      setLoading(false); // hide loader
     }
   };
 
-  // Edit
   const handleEditBus = (bus) => {
     setEditingBus(bus);
     setIsModalOpen(true);
   };
 
-  const getInitialData = () => {
-    if (!editingBus) return {};
-    return {
-      busNo: editingBus.bus_no,
-      numberPlate: editingBus.number_plate,
-      licenseNumber: editingBus.license_number,
-      type: editingBus.type,
-      model: editingBus.model,
-    };
-  };
+  const getInitialData = () => editingBus ? {
+    busNo: editingBus.bus_no,
+    numberPlate: editingBus.number_plate,
+    licenseNumber: editingBus.license_number,
+    type: editingBus.type,
+    model: editingBus.model,
+  } : {};
 
   return (
     <DashboardLayout>
@@ -198,14 +157,18 @@ function Buses() {
           </button>
         </div>
 
-        <CustomTable
-          columns={columns}
-          data={busesData}
-          title="لیست بس‌ها"
-          onView={(bus) => console.log("View bus:", bus)}
-          onEdit={handleEditBus}
-          onDelete={(bus) => handleDeleteBus(bus.id)}
-        />
+        {loading ? (
+          <Loader /> // ✅ show loader
+        ) : (
+          <CustomTable
+            columns={columns}
+            data={busesData}
+            title="لیست بس‌ها"
+            onView={(bus) => console.log("View bus:", bus)}
+            onEdit={handleEditBus}
+            onDelete={(bus) => handleDeleteBus(bus.id)}
+          />
+        )}
 
         <CustomFormModal
           isOpen={isModalOpen}
@@ -215,6 +178,8 @@ function Buses() {
           titleIcon={<RiBusFill size={30} />}
           fields={fields}
           initialData={getInitialData()}
+          existingBuses={busesData}
+          editingBus={editingBus}
         />
       </div>
     </DashboardLayout>
