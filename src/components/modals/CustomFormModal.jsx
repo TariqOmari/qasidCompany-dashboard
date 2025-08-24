@@ -8,45 +8,41 @@ const CustomFormModal = ({
   titleIcon,
   fields = [],
   initialData = null,
-
-  // ✅ Passed from parent
   existingBuses = [],
   editingBus = null,
   existingDrivers = [],
   editingDriver = null,
-
   children,
 }) => {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [isValid, setIsValid] = useState(false);
 
- useEffect(() => {
-  if (!isOpen) return;
+  // Initialize form when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
 
-  // Only initialize form once when modal opens
-  const initialFormValues = {};
-  fields.forEach((field) => {
-    initialFormValues[field.name] = initialData?.[field.name] ?? '';
-  });
+    const initialFormValues = {};
+    fields.forEach((field) => {
+      initialFormValues[field.name] = initialData?.[field.name] ?? '';
+    });
 
-  setFormData(initialFormValues);
-  setErrors({});
-  setIsValid(false);
-}, [isOpen]); // <-- removed initialData & fields from dependency
-
+    setFormData(initialFormValues);
+    setErrors({});
+    validateForm(initialFormValues); // ✅ Validate immediately
+  }, [isOpen]);
 
   const validateForm = (data = formData) => {
     const newErrors = {};
 
-    // ✅ Required fields
+    // Required fields check
     fields.forEach((field) => {
-      if (field.required && !data[field.name]) {
+      if (field.required && !data[field.name]?.toString().trim()) {
         newErrors[field.name] = `${field.label} الزامی است`;
       }
     });
 
-    // ✅ Bus duplicate checks
+    // Bus duplicate checks
     if (data.busNo) {
       const exists = existingBuses.some(
         (b) => b.bus_no === data.busNo && b.id !== editingBus?.id
@@ -55,22 +51,18 @@ const CustomFormModal = ({
     }
     if (data.numberPlate) {
       const exists = existingBuses.some(
-        (b) =>
-          b.number_plate === data.numberPlate && b.id !== editingBus?.id
+        (b) => b.number_plate === data.numberPlate && b.id !== editingBus?.id
       );
       if (exists) newErrors.numberPlate = 'این پلاک قبلاً ثبت شده است';
     }
     if (data.licenseNumber) {
       const exists = existingBuses.some(
-        (b) =>
-          b.license_number === data.licenseNumber &&
-          b.id !== editingBus?.id
+        (b) => b.license_number === data.licenseNumber && b.id !== editingBus?.id
       );
-      if (exists)
-        newErrors.licenseNumber = 'این شماره مجوز قبلاً ثبت شده است';
+      if (exists) newErrors.licenseNumber = 'این شماره مجوز قبلاً ثبت شده است';
     }
 
-    // ✅ Driver duplicate checks
+    // Driver duplicate checks
     if (data.phone) {
       const exists = existingDrivers.some(
         (d) => d.phone === data.phone && d.id !== editingDriver?.id
@@ -79,12 +71,9 @@ const CustomFormModal = ({
     }
     if (data.license_number) {
       const exists = existingDrivers.some(
-        (d) =>
-          d.license_number === data.license_number &&
-          d.id !== editingDriver?.id
+        (d) => d.license_number === data.license_number && d.id !== editingDriver?.id
       );
-      if (exists)
-        newErrors.license_number = 'این شماره گواهینامه قبلاً ثبت شده است';
+      if (exists) newErrors.license_number = 'این شماره گواهینامه قبلاً ثبت شده است';
     }
 
     setErrors(newErrors);
@@ -104,9 +93,7 @@ const CustomFormModal = ({
     if (!validateForm()) return;
 
     try {
-      if (onSubmit) {
-        await onSubmit(formData);
-      }
+      if (onSubmit) await onSubmit(formData);
       onClose();
     } catch (err) {
       console.error('Modal submit error:', err);
@@ -116,11 +103,7 @@ const CustomFormModal = ({
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black transition-all duration-300
-        ${
-          isOpen
-            ? 'bg-opacity-40 visible opacity-100'
-            : 'bg-opacity-0 invisible opacity-0 pointer-events-none'
-        }`}
+        ${isOpen ? 'bg-opacity-40 visible opacity-100' : 'bg-opacity-0 invisible opacity-0 pointer-events-none'}`}
     >
       <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6 font-vazir text-right max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold mb-6 text-[#0B2A5B] flex items-center gap-2 justify-end">
@@ -128,10 +111,7 @@ const CustomFormModal = ({
           {titleIcon && <span className="text-[#F37021]">{titleIcon}</span>}
         </h2>
 
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-6"
-        >
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {fields.map((field) => (
             <div key={field.name}>
               <InputWithIcon
@@ -157,9 +137,7 @@ const CustomFormModal = ({
               type="submit"
               disabled={!isValid}
               className={`px-4 py-2 rounded transition text-white ${
-                isValid
-                  ? 'bg-[#F37021] hover:bg-orange-600'
-                  : 'bg-gray-400 cursor-not-allowed'
+                isValid ? 'bg-[#F37021] hover:bg-orange-600' : 'bg-gray-400 cursor-not-allowed'
               }`}
             >
               {initialData ? 'به‌روزرسانی' : 'افزودن'}
@@ -171,7 +149,7 @@ const CustomFormModal = ({
   );
 };
 
-// Input with icon + error
+// Input component
 const InputWithIcon = ({
   icon,
   label,
