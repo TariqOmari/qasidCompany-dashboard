@@ -18,6 +18,8 @@ const Sidebar = () => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+   const logo_Base_URL_forlogo = import.meta.env.VITE_API_BASE_URL_forlogo;
+
   useEffect(() => {
     // ✅ Get company data from sessionStorage
     const storedCompany = sessionStorage.getItem("company");
@@ -72,7 +74,7 @@ const Sidebar = () => {
             <img
               src={
                 company.logo_url
-                  ? `http://127.0.0.1:8000/storage/${company.logo_url}`
+                  ? `${logo_Base_URL_forlogo}/storage/app/public/${company.logo_url}`
                   : "/default-avatar.png"
               }
               alt="لوگو شرکت"
