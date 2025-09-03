@@ -42,6 +42,11 @@ const CustomFormModal = ({
       }
     });
 
+
+
+
+
+
     // Bus duplicate checks
     if (data.busNo) {
       const exists = existingBuses.some(
@@ -53,13 +58,13 @@ const CustomFormModal = ({
       const exists = existingBuses.some(
         (b) => b.number_plate === data.numberPlate && b.id !== editingBus?.id
       );
-      if (exists) newErrors.numberPlate = 'این پلاک قبلاً ثبت شده است';
+      if (exists) newErrors.numberPlate = 'این نمبر پلیت قبلاً ثبت شده است';
     }
     if (data.licenseNumber) {
       const exists = existingBuses.some(
         (b) => b.license_number === data.licenseNumber && b.id !== editingBus?.id
       );
-      if (exists) newErrors.licenseNumber = 'این شماره مجوز قبلاً ثبت شده است';
+      if (exists) newErrors.licenseNumber = 'این جوازسیر قبلاً ثبت شده است';
     }
 
     // Driver duplicate checks
@@ -73,7 +78,7 @@ const CustomFormModal = ({
       const exists = existingDrivers.some(
         (d) => d.license_number === data.license_number && d.id !== editingDriver?.id
       );
-      if (exists) newErrors.license_number = 'این شماره گواهینامه قبلاً ثبت شده است';
+      if (exists) newErrors.license_number = 'این لیسنس  قبلاً ثبت شده است';
     }
 
     setErrors(newErrors);

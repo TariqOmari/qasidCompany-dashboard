@@ -122,13 +122,14 @@ const CustomTable = ({
                   </td>
                 )}
                 {columns.map((col, i) => (
-                  <td
-                    key={i}
-                    className="px-4 py-3 text-right text-gray-700 text-sm whitespace-nowrap"
-                  >
-                    {row[col.accessor]}
-                  </td>
-                ))}
+  <td
+    key={i}
+    className="px-4 py-3 text-right text-gray-700 text-sm whitespace-nowrap"
+  >
+    {col.render ? col.render(row) : row[col.accessor]}
+  </td>
+))}
+
                 <td className="px-4 py-3 text-right">
                   <div className="flex gap-2 justify-start items-center">
                     {onView && (

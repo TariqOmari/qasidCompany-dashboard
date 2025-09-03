@@ -9,7 +9,6 @@ import {
   RiMenu3Line,
 } from "react-icons/ri";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-
 const Sidebar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [company, setCompany] = useState(null);
@@ -18,7 +17,7 @@ const Sidebar = () => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-   const logo_Base_URL_forlogo = import.meta.env.VITE_API_BASE_URL_forlogo;
+   const logo_url = import.meta.env.VITE_API_BASE_URL_For_logo;
 
   useEffect(() => {
     // ✅ Get company data from sessionStorage
@@ -38,7 +37,7 @@ const Sidebar = () => {
     { label: "بس ها", icon: <RiBusFill />, to: "/bus" },
     { label: "راننده ها", icon: <RiDriveLine />, to: "/driver" },
     { label: "سفرها", icon: <RiAirplayFill />, to: "/trips" },
-    { label: "چالان هایی شرکت", icon: <RiAirplayFill />, to: "/chalans" },
+    { label: "لیست چالان", icon: <RiAirplayFill />, to: "/chalans" },
   ];
 
   return (
@@ -71,15 +70,16 @@ const Sidebar = () => {
         {company && (
           <div className="px-6 flex flex-col items-center text-center mb-6">
             {/* Logo */}
-            <img
+     <img
               src={
                 company.logo_url
-                  ? `${logo_Base_URL_forlogo}/storage/app/public/${company.logo_url}`
+                  ? `${logo_url}/storage/${company.logo_url}`
                   : "/default-avatar.png"
               }
               alt="لوگو شرکت"
               className="w-16 h-16 rounded-full shadow-lg border-2 border-white mb-3"
             />
+
             {/* Company Name */}
             <h1 className="text-lg font-extrabold">{`شرکت ترانسپورتی ${company.name}`}</h1>
             {/* Username */}

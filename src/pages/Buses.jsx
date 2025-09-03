@@ -6,68 +6,85 @@ import Loader from '../components/Loader';
 import { RiBusFill, RiNumbersFill } from 'react-icons/ri';
 import CustomFormModal from '../components/modals/CustomFormModal';
 import { useToast } from '../components/ToastContext';
+import moment from 'jalali-moment'; // ✅ import jalali-moment
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const columns = [
-  { header: 'شناسه', accessor: 'id' },
   { header: 'شماره بس', accessor: 'bus_no' },
-  { header: 'پلاک', accessor: 'number_plate' },
-  { header: 'شماره مجوز', accessor: 'license_number' },
+  { header: 'نمبر پلیت', accessor: 'number_plate' },
+  { header: 'جواز سیر', accessor: 'license_number' },
   { header: 'نوع', accessor: 'type' },
-  { header: 'مدل', accessor: 'model' },
-  { header: 'تاریخ ایجاد', accessor: 'created_at' },
+  {
+    header: 'تاریخ ایجاد',
+    accessor: 'created_at',
+    render: (row) =>
+      row.created_at
+        ? moment(row.created_at).locale('fa').format('jYYYY/jM/jD')
+        : '-',
+  },
 ];
 
 function Buses() {
   const [busesData, setBusesData] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBus, setEditingBus] = useState(null);
-  const [loading, setLoading] = useState(false); // ✅ loader state
+  const [loading, setLoading] = useState(false);
   const toast = useToast();
 
   const busTypes = [
     { value: 'vip', label: 'VIP' },
-    { value: 'standard', label: 'استاندارد' }
+    { value: '580', label: '580' }
   ];
 
-  // Fetch buses
+  const fields = [
+    { name: 'busNo', label: 'شماره بس', placeholder: 'مثلا BUS-101', icon: <RiBusFill />, type: 'text', required: true },
+    { name: 'numberPlate', label: 'نمبر پلیت', placeholder: 'مثلا KBL-123', icon: <RiNumbersFill />, type: 'text', required: true },
+    { name: 'licenseNumber', label: 'جوازسیر', placeholder: 'مثلا LIC-98765', icon: <RiNumbersFill />, type: 'text', required: true },
+    { name: 'type', label: 'نوع بس', type: 'select', options: busTypes, required: true },
+  ];
+
   useEffect(() => {
     const fetchBuses = async () => {
-      setLoading(true); // show loader
+      setLoading(true);
       try {
         const token = sessionStorage.getItem('auth_token');
         if (!token) {
           toast.error('توکن یافت نشد! لطفا دوباره وارد شوید.');
           return;
         }
-
         const response = await axios.get(`${API_BASE_URL}/api/buses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        setBusesData(response.data);
+        // ✅ Sort buses by created_at DESC
+        const sortedBuses = [...response.data].sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+
+        setBusesData(sortedBuses);
       } catch (error) {
         console.error('Error fetching buses:', error);
         toast.error('دریافت لیست بس‌ها ناموفق بود.');
       } finally {
-        setLoading(false); // hide loader
+        setLoading(false);
       }
     };
-
     fetchBuses();
   }, []);
 
-  const fields = [
-    { name: 'busNo', label: 'شماره بس', placeholder: 'مثلا BUS-101', icon: <RiBusFill />, type: 'text', required: true },
-    { name: 'numberPlate', label: 'پلاک بس', placeholder: 'مثلا KBL-123', icon: <RiNumbersFill />, type: 'text', required: true },
-    { name: 'licenseNumber', label: 'شماره مجوز', placeholder: 'مثلا LIC-98765', icon: <RiNumbersFill />, type: 'text', required: true },
-    { name: 'type', label: 'نوع بس', type: 'select', options: busTypes, required: true },
-    { name: 'model', label: 'مدل بس', placeholder: 'مثلا 580', icon: <RiBusFill />, type: 'text', required: true },
-  ];
+  const getInitialData = () =>
+    editingBus
+      ? {
+          busNo: editingBus.bus_no,
+          numberPlate: editingBus.number_plate,
+          licenseNumber: editingBus.license_number,
+          type: editingBus.type,
+        }
+      : {};
 
   const handleSaveBus = async (formData) => {
-    setLoading(true); // show loader
+    setLoading(true);
     try {
       const token = sessionStorage.getItem('auth_token');
       if (!token) {
@@ -80,7 +97,6 @@ function Buses() {
         number_plate: formData.numberPlate,
         license_number: formData.licenseNumber,
         type: formData.type,
-        model: formData.model,
       };
 
       if (editingBus) {
@@ -89,7 +105,11 @@ function Buses() {
           payload,
           { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
         );
-        setBusesData(prev => prev.map(bus => bus.id === editingBus.id ? response.data : bus));
+        setBusesData((prev) =>
+          prev
+            .map((bus) => (bus.id === editingBus.id ? response.data.bus : bus))
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        );
         toast.success('بس با موفقیت ویرایش شد.');
       } else {
         const response = await axios.post(
@@ -97,7 +117,7 @@ function Buses() {
           payload,
           { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
         );
-        setBusesData(prev => [...prev, response.data]);
+        setBusesData((prev) => [response.data.bus, ...prev]);
         toast.success('بس با موفقیت ایجاد شد.');
       }
 
@@ -107,26 +127,26 @@ function Buses() {
       console.error('Error saving bus:', error);
       toast.error('ذخیره‌سازی ناموفق بود.');
     } finally {
-      setLoading(false); // hide loader
+      setLoading(false);
     }
   };
 
   const handleDeleteBus = async (id) => {
     if (!window.confirm('آیا مطمئن هستید؟')) return;
 
-    setLoading(true); // show loader
+    setLoading(true);
     try {
       const token = sessionStorage.getItem('auth_token');
       await axios.delete(`${API_BASE_URL}/api/buses/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setBusesData(prev => prev.filter(bus => bus.id !== id));
+      setBusesData((prev) => prev.filter((bus) => bus.id !== id));
       toast.success('بس با موفقیت حذف شد.');
     } catch (err) {
       console.error('Delete error:', err.response || err);
       toast.error('حذف بس ناموفق بود.');
     } finally {
-      setLoading(false); // hide loader
+      setLoading(false);
     }
   };
 
@@ -134,14 +154,6 @@ function Buses() {
     setEditingBus(bus);
     setIsModalOpen(true);
   };
-
-  const getInitialData = () => editingBus ? {
-    busNo: editingBus.bus_no,
-    numberPlate: editingBus.number_plate,
-    licenseNumber: editingBus.license_number,
-    type: editingBus.type,
-    model: editingBus.model,
-  } : {};
 
   return (
     <DashboardLayout>
@@ -158,7 +170,7 @@ function Buses() {
         </div>
 
         {loading ? (
-          <Loader /> // ✅ show loader
+          <Loader />
         ) : (
           <CustomTable
             columns={columns}

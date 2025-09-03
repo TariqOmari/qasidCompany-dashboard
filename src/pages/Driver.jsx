@@ -6,6 +6,7 @@ import axios from 'axios';
 import { MdPersonAdd } from 'react-icons/md';
 import { useToast } from '../components/ToastContext';
 import Loader from '../components/Loader';
+import moment from 'jalali-moment'; // ✅ Import jalali-moment
 
 // ✅ Vite: use import.meta.env
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -25,7 +26,13 @@ const Driver = () => {
     setLoading(true);
     try {
       const res = await axios.get(DRIVER_API);
-      setDrivers(res.data);
+
+      // ✅ Sort by created_at DESC
+      const sortedDrivers = [...res.data].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setDrivers(sortedDrivers);
     } catch (err) {
       console.error('Error fetching drivers:', err);
       toast.error('خطا در دریافت رانندگان: ' + (err.response?.data?.message || err.message));
@@ -42,7 +49,7 @@ const Driver = () => {
     setModalLoading(true);
     try {
       const submitData = { ...data, father_name: data.father_name || '' };
-      
+
       if (editingDriver) {
         // Update
         await axios.put(`${DRIVER_API}/${editingDriver.id}`, submitData);
@@ -79,18 +86,27 @@ const Driver = () => {
     }
   };
 
+  // ✅ Add created_at column with Persian date
   const columns = [
     { header: 'نام', accessor: 'name' },
     { header: 'نام پدر', accessor: 'father_name' },
     { header: 'تلفن', accessor: 'phone' },
-    { header: 'شماره گواهینامه', accessor: 'license_number' },
+    { header: 'نمبر لیسانس', accessor: 'license_number' },
+    {
+      header: 'تاریخ ایجاد',
+      accessor: 'created_at',
+      render: (row) =>
+        row.created_at
+          ? moment(row.created_at).locale('fa').format('jYYYY/jM/jD')
+          : '-',
+    },
   ];
 
   const fields = [
-    { name: 'name', label: 'نام', type: 'text', placeholder: 'نام راننده', required: true },
     { name: 'father_name', label: 'نام پدر', type: 'text', placeholder: 'نام پدر', required: true },
+    { name: 'name', label: 'نام', type: 'text', placeholder: 'نام راننده', required: true },
     { name: 'phone', label: 'تلفن', type: 'number', placeholder: 'شماره تلفن' },
-    { name: 'license_number', label: 'شماره گواهینامه', type: 'text', placeholder: 'شماره گواهینامه', required: true },
+    { name: 'license_number', label: 'نمبر لیسانس', type: 'text', placeholder: 'نمبر لیسانس', required: true },
   ];
 
   if (loading) {

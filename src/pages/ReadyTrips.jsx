@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import CustomTable from "../components/CustomTable";
 import { toJalali, fromJalali } from 'jalali-date';
@@ -10,18 +10,23 @@ import {
   RiCalendarEventLine,
   RiFilterLine,
   RiCheckLine,
-  RiCloseLine
+  RiCloseLine,
+  RiMapPinLine,
+  RiTimeLine,
+  RiPrinterLine
 } from 'react-icons/ri';
 import DashboardLayout from "../components/DashboardLayout";
 
 function ReadyTrips() {
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
-  const [selectedJalaliDate, setSelectedJalaliDate] = useState({
-    year: '',
-    month: '',
-    day: ''
-  });
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
+  const [selectedFrom, setSelectedFrom] = useState('');
+  const [selectedTo, setSelectedTo] = useState('');
+  const [selectedHour, setSelectedHour] = useState('');
+  const [selectedMinute, setSelectedMinute] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState('');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalTrips: 0,
@@ -37,6 +42,11 @@ function ReadyTrips() {
   const [selectedDriver, setSelectedDriver] = useState("");
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
   const [assigning, setAssigning] = useState(false);
+  const [uniqueFromLocations, setUniqueFromLocations] = useState([]);
+  const [uniqueToLocations, setUniqueToLocations] = useState([]);
+
+  // Create a ref for the table to print
+  const tableRef = useRef();
 
   // Handle selection change
   const handleSelectionChange = (selectedItems) => {
@@ -58,6 +68,13 @@ function ReadyTrips() {
     5: 'اسد', 6: 'سنبله', 7: 'میزان', 8: 'عقرب',
     9: 'قوس', 10: 'جدی', 11: 'دلو', 12: 'حوت'
   };
+  
+  // Generate hour options (1-12)
+  const hourOptions = Array.from({ length: 12 }, (_, i) => i + 1);
+  
+  // Generate minute options (0-59 in 5-minute intervals)
+  const minuteOptions = Array.from({ length: 12 }, (_, i) => i * 5);
+  
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Fetch trips with tickets
@@ -69,6 +86,12 @@ function ReadyTrips() {
         const tripsData = res.data.trips || [];
         setTrips(tripsData);
         setFilteredTrips(tripsData);
+        
+        // Extract unique from and to locations
+        const fromLocations = [...new Set(tripsData.map(trip => trip.from))];
+        const toLocations = [...new Set(tripsData.map(trip => trip.to))];
+        setUniqueFromLocations(fromLocations);
+        setUniqueToLocations(toLocations);
         
         // Calculate stats
         const totalTickets = tripsData.reduce((acc, trip) => acc + (trip.tickets?.length || 0), 0);
@@ -120,28 +143,87 @@ function ReadyTrips() {
     fetchDrivers();
   }, []);
 
-  // Filter trips by selected Persian date
+  // Filter trips based on selected criteria
   useEffect(() => {
-    if (!selectedJalaliDate.year || !selectedJalaliDate.month || !selectedJalaliDate.day) {
-      setFilteredTrips(trips);
-      return;
+    let filtered = [...trips];
+    
+    // Filter by month and day (ignore year)
+    if (selectedMonth || selectedDay) {
+      filtered = filtered.filter(trip => {
+        if (!trip.departure_date) return false;
+        
+        const [year, month, day] = trip.departure_date.split('-');
+        
+        // Check month filter
+        if (selectedMonth && month !== selectedMonth) return false;
+        
+        // Check day filter
+        if (selectedDay && day !== selectedDay.padStart(2, '0')) return false;
+        
+        return true;
+      });
     }
-
-    // Format the selected date as YYYY-MM-DD
-    const jalaliDate = `${selectedJalaliDate.year}-${selectedJalaliDate.month.toString().padStart(2, "0")}-${selectedJalaliDate.day.toString().padStart(2, "0")}`;
-
-    // Filter trips where departure_date matches the selected Jalali date
-    const filtered = trips.filter((trip) => trip.departure_date === jalaliDate);
+    
+    // Filter by from location
+    if (selectedFrom) {
+      filtered = filtered.filter(trip => trip.from === selectedFrom);
+    }
+    
+    // Filter by to location
+    if (selectedTo) {
+      filtered = filtered.filter(trip => trip.to === selectedTo);
+    }
+    
+    // Filter by time (hour, minute, and period)
+    if (selectedHour || selectedMinute || selectedPeriod) {
+      filtered = filtered.filter(trip => {
+        if (!trip.departure_time) return false;
+        
+        // Parse the time string
+        const time = trip.departure_time.toUpperCase();
+        const isPM = time.includes('PM') || time.includes('شب');
+        const timeWithoutPeriod = time.replace(/\s?(AM|PM|صبح|شب)/i, '');
+        const [hours, minutes] = timeWithoutPeriod.split(':').map(part => parseInt(part));
+        
+        // Convert to 24-hour format for easier comparison
+        let hour24 = isPM && hours !== 12 ? hours + 12 : hours;
+        if (!isPM && hours === 12) hour24 = 0; // Midnight case
+        
+        // Check hour filter
+        if (selectedHour) {
+          const selectedHourInt = parseInt(selectedHour);
+          // Convert selected hour to 24-hour format if period is specified
+          let compareHour = selectedHourInt;
+          if (selectedPeriod === 'PM' && selectedHourInt !== 12) {
+            compareHour = selectedHourInt + 12;
+          } else if (selectedPeriod === 'AM' && selectedHourInt === 12) {
+            compareHour = 0;
+          }
+          
+          if (hour24 !== compareHour) return false;
+        }
+        
+        // Check minute filter
+        if (selectedMinute) {
+          const selectedMinuteInt = parseInt(selectedMinute);
+          if (minutes !== selectedMinuteInt) return false;
+        }
+        
+        // Check period filter (if hour is not selected)
+        if (selectedPeriod && !selectedHour) {
+          const isTripPM = time.includes('PM') || time.includes('شب');
+          if ((selectedPeriod === 'PM' && !isTripPM) || 
+              (selectedPeriod === 'AM' && isTripPM)) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+    }
+    
     setFilteredTrips(filtered);
-  }, [selectedJalaliDate, trips]);
-
-  // Handle date input changes
-  const handleDateChange = (field, value) => {
-    setSelectedJalaliDate(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  }, [selectedMonth, selectedDay, selectedFrom, selectedTo, selectedHour, selectedMinute, selectedPeriod, trips]);
 
   // Handle assignment of both bus and driver
   const handleAssignBusAndDriver = async () => {
@@ -219,16 +301,181 @@ function ReadyTrips() {
     return driver ? `${driver.name} ${driver.father_name}` : `راننده ${driverId}`;
   };
 
+  // Format time to display in Persian/Dari
+  const formatTimeForDisplay = (time) => {
+    if (!time) return "";
+    
+    // Check if time already contains Persian text
+    if (time.includes('صبح') || time.includes('شب')) {
+      return time;
+    }
+    
+    // Convert AM/PM to Persian
+    if (time.includes('AM')) {
+      return time.replace('AM', 'صبح');
+    } else if (time.includes('PM')) {
+      return time.replace('PM', 'شب');
+    }
+    
+    return time;
+  };
+
+  // Reset all filters
+  const resetFilters = () => {
+    setSelectedMonth('');
+    setSelectedDay('');
+    setSelectedFrom('');
+    setSelectedTo('');
+    setSelectedHour('');
+    setSelectedMinute('');
+    setSelectedPeriod('');
+  };
+
+  // Print the tickets table
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    
+    // Get trip information for the header
+    const tripInfo = filteredTrips.length > 0 ? filteredTrips[0] : null;
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl">
+      <head>
+        <title>چاپ تکت‌ها</title>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+          }
+          .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #0B2A5B;
+            padding-bottom: 15px;
+          }
+          .print-header h1 {
+            color: #0B2A5B;
+            margin: 0 0 10px 0;
+          }
+          .trip-info {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+          }
+          .trip-info div {
+            margin: 5px 15px;
+          }
+          .trip-info strong {
+            color: #0B2A5B;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+          }
+          th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+          }
+          th {
+            background-color: #f2f2f2;
+            color: #0B2A5B;
+          }
+          tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          .print-footer {
+            margin-top: 20px;
+            text-align: left;
+            font-size: 12px;
+            color: #666;
+          }
+          @media print {
+            body {
+              padding: 15px;
+            }
+            .no-print {
+              display: none;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-header">
+          <h1>لیست تکت‌های بس</h1>
+          ${tripInfo ? `
+            <div class="trip-info">
+              <div><strong>مبدا:</strong> ${tripInfo.from}</div>
+              <div><strong>مقصد:</strong> ${tripInfo.to}</div>
+              <div><strong>تاریخ حرکت:</strong> ${tripInfo.departure_date}</div>
+              <div><strong>زمان حرکت:</strong> ${formatTimeForDisplay(tripInfo.departure_time)}</div>
+            </div>
+          ` : ''}
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>نام</th>
+              <th>تخلص</th>
+              <th>شماره تماس</th>
+              <th>نمبر سیت</th>
+              <th>روش پرداخت</th>
+              <th>بس</th>
+              <th>راننده</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableData.map(ticket => `
+              <tr>
+                <td>${ticket.name || ''}</td>
+                <td>${ticket.last_name || ''}</td>
+                <td>${ticket.phone || ''}</td>
+                <td>${ticket.seat_number || ''}</td>
+                <td>${ticket.payment_method || ''}</td>
+               
+                <td>${ticket.bus_details || ''}</td>
+                <td>${ticket.driver_details || ''}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        
+        <div class="print-footer">
+          <p>تعداد تکت‌ها: ${tableData.length}</p>
+          <p>تاریخ چاپ: ${new Date().toLocaleDateString('fa-IR')}</p>
+        </div>
+      </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    
+    // Wait for content to load before printing
+    setTimeout(() => {
+      printWindow.print();
+      // printWindow.close(); // Uncomment if you want to automatically close after printing
+    }, 250);
+  };
+
   // Table columns
   const columns = [
     { header: "از", accessor: "from" },
     { header: "به", accessor: "to" },
     { header: "تاریخ حرکت", accessor: "departure_date" },
+    { header: "زمان حرکت", accessor: "departure_time" },
     { header: "نام", accessor: "name" },
     { header: "تخلص", accessor: "last_name" },
     { header: "شماره تماس", accessor: "phone" },
     { header: "روش پرداخت", accessor: "payment_method" },
-    { header: "وضعیت تکت", accessor: "ticket_status" },
+    { header: "نمبر سیت", accessor: "seat_number" },
+ 
     { header: "بس", accessor: "bus_details" },
     { header: "راننده", accessor: "driver_details" },
   ];
@@ -240,11 +487,13 @@ function ReadyTrips() {
       from: trip.from,
       to: trip.to,
       departure_date: trip.departure_date,
+      departure_time: formatTimeForDisplay(trip.departure_time),
       name: ticket.name,
       last_name: ticket.last_name,
       phone: ticket.phone,
       payment_method: ticket.payment_method,
-      ticket_status: ticket.status,
+      seat_number: ticket.seat_number,
+    
       bus_details: getBusDetails(ticket.bus_id),
       driver_details: getDriverDetails(ticket.driver_id),
     }))
@@ -300,69 +549,141 @@ function ReadyTrips() {
             </div>
           )}
 
-          {/* Persian Date Filter */}
+          {/* Enhanced Filter Section */}
           <div className="flex flex-col gap-4 bg-white p-4 rounded-lg shadow-md">
             <h2 className="font-bold text-[#0B2A5B] text-lg flex items-center gap-2">
               <RiFilterLine />
-              فیلتر براساس تاریخ (تقویم افغانی)
+              فیلتر تکت‌ها
             </h2>
             
-            <div className="flex flex-wrap gap-4 items-center">
-              <div className="flex flex-col">
-                <label className="text-sm text-gray-600 mb-1">سال</label>
-                <input
-                  type="number"
-                  value={selectedJalaliDate.year}
-                  onChange={(e) => handleDateChange('year', e.target.value)}
-                  className="border p-2 rounded-lg w-24 text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="1403"
-                  min="1300"
-                  max="1500"
-                />
-              </div>
-              
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              {/* Month Filter */}
               <div className="flex flex-col">
                 <label className="text-sm text-gray-600 mb-1">ماه</label>
                 <select
-                  value={selectedJalaliDate.month}
-                  onChange={(e) => handleDateChange('month', e.target.value)}
-                  className="border p-2 rounded-lg w-32 text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">انتخاب ماه</option>
+                  <option value="">همه ماه‌ها</option>
                   {Object.entries(afghanMonths).map(([num, name]) => (
-                    <option key={num} value={num}>
+                    <option key={num} value={num.padStart(2, '0')}>
                       {name}
                     </option>
                   ))}
                 </select>
               </div>
               
+              {/* Day Filter */}
               <div className="flex flex-col">
                 <label className="text-sm text-gray-600 mb-1">روز</label>
                 <input
                   type="number"
-                  value={selectedJalaliDate.day}
-                  onChange={(e) => handleDateChange('day', e.target.value)}
-                  className="border p-2 rounded-lg w-20 text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="1"
+                  value={selectedDay}
+                  onChange={(e) => setSelectedDay(e.target.value)}
+                  className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="روز"
                   min="1"
                   max="31"
                 />
               </div>
               
-              <button
-                onClick={() => setSelectedJalaliDate({ year: '', month: '', day: '' })}
-                className="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
-              >
-                حذف فیلتر
-              </button>
+              {/* From Filter */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">مبدا</label>
+                <select
+                  value={selectedFrom}
+                  onChange={(e) => setSelectedFrom(e.target.value)}
+                  className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">همه مبداها</option>
+                  {uniqueFromLocations.map((location, index) => (
+                    <option key={index} value={location}>
+                      {location}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* To Filter */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">مقصد</label>
+                <select
+                  value={selectedTo}
+                  onChange={(e) => setSelectedTo(e.target.value)}
+                  className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">همه مقصدها</option>
+                  {uniqueToLocations.map((location, index) => (
+                    <option key={index} value={location}>
+                      {location}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Time Filter - Hour */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">ساعت</label>
+                <select
+                  value={selectedHour}
+                  onChange={(e) => setSelectedHour(e.target.value)}
+                  className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">ساعة</option>
+                  {hourOptions.map((hour) => (
+                    <option key={hour} value={hour}>
+                      {hour}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Time Filter - Minute */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">دقیقه</label>
+                <select
+                  value={selectedMinute}
+                  onChange={(e) => setSelectedMinute(e.target.value)}
+                  className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">دقیقه</option>
+                  {minuteOptions.map((minute) => (
+                    <option key={minute} value={minute}>
+                      {minute.toString().padStart(2, '0')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Time Filter - Period */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">قسمت روز</label>
+                <select
+                  value={selectedPeriod}
+                  onChange={(e) => setSelectedPeriod(e.target.value)}
+                  className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">همه</option>
+                  <option value="AM">صبح (AM)</option>
+                  <option value="PM">شب (PM)</option>
+                </select>
+              </div>
             </div>
             
-            {selectedJalaliDate.year && selectedJalaliDate.month && selectedJalaliDate.day && (
-              <div className="mt-2 text-sm text-[#0B2A5B]">
-                نمایش سفرهای تاریخ: {selectedJalaliDate.year}/{selectedJalaliDate.month}/{selectedJalaliDate.day} - {afghanMonths[selectedJalaliDate.month]}
+            <div className="flex justify-between items-center mt-2">
+              <div className="text-sm text-[#0B2A5B]">
+                {filteredTrips.length} سفر یافت شد
               </div>
-            )}
+              
+              <button
+                onClick={resetFilters}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center gap-2"
+              >
+                <RiCloseLine />
+                حذف همه فیلترها
+              </button>
+            </div>
           </div>
 
           {/* Cards Section */}
@@ -434,28 +755,40 @@ function ReadyTrips() {
                 {selectedTickets.length} تکت انتخاب شده است
               </p>
               
-              <button 
-                onClick={handleAssignBusAndDriver}
-                disabled={assigning || (!selectedBus && !selectedDriver) || selectedTickets.length === 0}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 px-8 rounded-lg text-sm transition flex items-center gap-2"
-              >
-                {assigning ? "در حال انتساب..." : "انتساب"}
-                <RiCheckLine />
-              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={handlePrint}
+                  className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm transition flex items-center gap-2"
+                >
+                  چاپ تکت‌ها
+                  <RiPrinterLine />
+                </button>
+                
+                <button 
+                  onClick={handleAssignBusAndDriver}
+                  disabled={assigning || (!selectedBus && !selectedDriver) || selectedTickets.length === 0}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 px-8 rounded-lg text-sm transition flex items-center gap-2"
+                >
+                  {assigning ? "در حال انتساب..." : "انتساب"}
+                  <RiCheckLine />
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Tickets Table */}
-          <CustomTable
-            title="تکت‌های بس‌ها"
-            columns={columns}
-            data={tableData}
-            selectable={true}
-            onSelectionChange={handleSelectionChange}
-            onView={(row) => console.log("View", row)}
-            onEdit={(row) => console.log("Assign Driver/Bus", row)}
-            onDelete={(row) => console.log("Delete", row)}
-          />
+          <div ref={tableRef}>
+            <CustomTable
+              title="تکت‌های بس‌ها"
+              columns={columns}
+              data={tableData}
+              selectable={true}
+              onSelectionChange={handleSelectionChange}
+              onView={(row) => console.log("View", row)}
+              onEdit={(row) => console.log("Assign Driver/Bus", row)}
+              onDelete={(row) => console.log("Delete", row)}
+            />
+          </div>
         </div>
       </DashboardLayout>
     </>
