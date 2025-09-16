@@ -13,39 +13,37 @@ const CustomFormModal = ({
   existingDrivers = [],
   editingDriver = null,
   children,
+  onFieldChange, // ✅ new prop
 }) => {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [isValid, setIsValid] = useState(false);
 
-  // Initialize form when modal opens
   useEffect(() => {
     if (!isOpen) return;
 
     const initialFormValues = {};
     fields.forEach((field) => {
-      initialFormValues[field.name] = initialData?.[field.name] ?? '';
+      if (field.type === 'checkbox') {
+        initialFormValues[field.name] = initialData?.[field.name] ?? false;
+      } else {
+        initialFormValues[field.name] = initialData?.[field.name] ?? '';
+      }
     });
 
     setFormData(initialFormValues);
     setErrors({});
-    validateForm(initialFormValues); // ✅ Validate immediately
+    validateForm(initialFormValues);
   }, [isOpen]);
 
   const validateForm = (data = formData) => {
     const newErrors = {};
 
-    // Required fields check
     fields.forEach((field) => {
-      if (field.required && !data[field.name]?.toString().trim()) {
+      if (field.required && !data[field.name]?.toString().trim() && field.type !== 'checkbox') {
         newErrors[field.name] = `${field.label} الزامی است`;
       }
     });
-
-
-
-
-
 
     // Bus duplicate checks
     if (data.busNo) {
@@ -87,9 +85,16 @@ const CustomFormModal = ({
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    const updated = { ...formData, [name]: value };
+    const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+
+    const updated = { ...formData, [name]: newValue };
     setFormData(updated);
+
+    if (typeof onFieldChange === 'function') {
+      onFieldChange(name, newValue); // ✅ send to parent
+    }
+
     validateForm(updated);
   };
 
@@ -118,10 +123,11 @@ const CustomFormModal = ({
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {fields.map((field) => (
-            <div key={field.name}>
+            <div key={field.name} className={field.type === 'checkbox' ? 'sm:col-span-2' : ''}>
               <InputWithIcon
                 {...field}
                 value={formData[field.name] || ''}
+                checked={!!formData[field.name]}
                 onChange={handleChange}
                 error={errors[field.name]}
               />
@@ -163,6 +169,7 @@ const InputWithIcon = ({
   placeholder,
   required = false,
   value,
+  checked,
   onChange,
   error,
   options = [],
@@ -192,6 +199,20 @@ const InputWithIcon = ({
           </option>
         ))}
       </select>
+    ) : type === 'checkbox' ? (
+      <div className="flex items-center justify-end gap-2">
+        <label htmlFor={name} className="text-sm text-gray-600">
+          {placeholder}
+        </label>
+        <input
+          id={name}
+          name={name}
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+        />
+      </div>
     ) : (
       <input
         name={name}

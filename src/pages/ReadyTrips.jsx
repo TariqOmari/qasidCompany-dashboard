@@ -27,6 +27,7 @@ function ReadyTrips() {
   const [selectedHour, setSelectedHour] = useState('');
   const [selectedMinute, setSelectedMinute] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('');
+  const [selectedBusType, setSelectedBusType] = useState('');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalTrips: 0,
@@ -44,6 +45,7 @@ function ReadyTrips() {
   const [assigning, setAssigning] = useState(false);
   const [uniqueFromLocations, setUniqueFromLocations] = useState([]);
   const [uniqueToLocations, setUniqueToLocations] = useState([]);
+  const [allTrips, setAllTrips] = useState([]); // Store all trips for filter options
 
   // Create a ref for the table to print
   const tableRef = useRef();
@@ -77,31 +79,39 @@ function ReadyTrips() {
   
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  // Fetch trips with tickets
+  // Fetch all trips to get all from/to locations for filters
   useEffect(() => {
     const fetchTrips = async () => {
       try {
         setLoading(true);
         const res = await axios.get(`${API_BASE_URL}/api/trips-with-tickets`);
-        const tripsData = res.data.trips || [];
-        setTrips(tripsData);
-        setFilteredTrips(tripsData);
+        const allTripsData = res.data.trips || [];
+        setAllTrips(allTripsData);
         
-        // Extract unique from and to locations
-        const fromLocations = [...new Set(tripsData.map(trip => trip.from))];
-        const toLocations = [...new Set(tripsData.map(trip => trip.to))];
+        // Extract unique from and to locations from ALL trips
+        const fromLocations = [...new Set(allTripsData.map(trip => trip.from))];
+        const toLocations = [...new Set(allTripsData.map(trip => trip.to))];
         setUniqueFromLocations(fromLocations);
         setUniqueToLocations(toLocations);
         
-        // Calculate stats
-        const totalTickets = tripsData.reduce((acc, trip) => acc + (trip.tickets?.length || 0), 0);
-        const assignedDriversCount = tripsData.reduce((acc, trip) => 
+        // Filter to only include paid tickets for display
+        const tripsWithPaidTickets = allTripsData.map(trip => ({
+          ...trip,
+          tickets: trip.tickets?.filter(ticket => ticket.payment_status === 'paid') || []
+        })).filter(trip => trip.tickets.length > 0); // Remove trips with no paid tickets
+        
+        setTrips(tripsWithPaidTickets);
+        setFilteredTrips(tripsWithPaidTickets);
+        
+        // Calculate stats based on paid tickets only
+        const totalTickets = tripsWithPaidTickets.reduce((acc, trip) => acc + (trip.tickets?.length || 0), 0);
+        const assignedDriversCount = tripsWithPaidTickets.reduce((acc, trip) => 
           acc + (trip.tickets?.filter(ticket => ticket.driver_id).length || 0), 0);
-        const assignedBusesCount = tripsData.reduce((acc, trip) => 
+        const assignedBusesCount = tripsWithPaidTickets.reduce((acc, trip) => 
           acc + (trip.tickets?.filter(ticket => ticket.bus_id).length || 0), 0);
         
         setStats({
-          totalTrips: tripsData.length,
+          totalTrips: tripsWithPaidTickets.length,
           totalTickets: totalTickets,
           assignedDrivers: assignedDriversCount,
           assignedBuses: assignedBusesCount
@@ -174,6 +184,14 @@ function ReadyTrips() {
       filtered = filtered.filter(trip => trip.to === selectedTo);
     }
     
+    // Filter by bus type
+    if (selectedBusType) {
+      filtered = filtered.map(trip => ({
+        ...trip,
+        tickets: trip.tickets?.filter(ticket => ticket.bus_type === selectedBusType) || []
+      })).filter(trip => trip.tickets.length > 0);
+    }
+    
     // Filter by time (hour, minute, and period)
     if (selectedHour || selectedMinute || selectedPeriod) {
       filtered = filtered.filter(trip => {
@@ -223,7 +241,7 @@ function ReadyTrips() {
     }
     
     setFilteredTrips(filtered);
-  }, [selectedMonth, selectedDay, selectedFrom, selectedTo, selectedHour, selectedMinute, selectedPeriod, trips]);
+  }, [selectedMonth, selectedDay, selectedFrom, selectedTo, selectedBusType, selectedHour, selectedMinute, selectedPeriod, trips]);
 
   // Handle assignment of both bus and driver
   const handleAssignBusAndDriver = async () => {
@@ -257,19 +275,27 @@ function ReadyTrips() {
       
       // Refresh trips data
       const res = await axios.get(`${API_BASE_URL}/api/trips-with-tickets`);
-      const tripsData = res.data.trips || [];
-      setTrips(tripsData);
-      setFilteredTrips(tripsData);
+      const allTripsData = res.data.trips || [];
+      setAllTrips(allTripsData);
       
-      // Update stats
-      const totalTickets = tripsData.reduce((acc, trip) => acc + (trip.tickets?.length || 0), 0);
-      const assignedDriversCount = tripsData.reduce((acc, trip) => 
+      // Filter to only include paid tickets for display
+      const tripsWithPaidTickets = allTripsData.map(trip => ({
+        ...trip,
+        tickets: trip.tickets?.filter(ticket => ticket.payment_status === 'paid') || []
+      })).filter(trip => trip.tickets.length > 0); // Remove trips with no paid tickets
+      
+      setTrips(tripsWithPaidTickets);
+      setFilteredTrips(tripsWithPaidTickets);
+      
+      // Update stats based on paid tickets only
+      const totalTickets = tripsWithPaidTickets.reduce((acc, trip) => acc + (trip.tickets?.length || 0), 0);
+      const assignedDriversCount = tripsWithPaidTickets.reduce((acc, trip) => 
         acc + (trip.tickets?.filter(ticket => ticket.driver_id).length || 0), 0);
-      const assignedBusesCount = tripsData.reduce((acc, trip) => 
+      const assignedBusesCount = tripsWithPaidTickets.reduce((acc, trip) => 
         acc + (trip.tickets?.filter(ticket => ticket.bus_id).length || 0), 0);
       
       setStats({
-        totalTrips: tripsData.length,
+        totalTrips: tripsWithPaidTickets.length,
         totalTickets: totalTickets,
         assignedDrivers: assignedDriversCount,
         assignedBuses: assignedBusesCount
@@ -326,6 +352,7 @@ function ReadyTrips() {
     setSelectedDay('');
     setSelectedFrom('');
     setSelectedTo('');
+    setSelectedBusType('');
     setSelectedHour('');
     setSelectedMinute('');
     setSelectedPeriod('');
@@ -426,7 +453,9 @@ function ReadyTrips() {
               <th>تخلص</th>
               <th>شماره تماس</th>
               <th>نمبر سیت</th>
+              <th>نوع بس</th>
               <th>روش پرداخت</th>
+              <th>وضعیت پرداخت</th>
               <th>بس</th>
               <th>راننده</th>
             </tr>
@@ -437,9 +466,10 @@ function ReadyTrips() {
                 <td>${ticket.name || ''}</td>
                 <td>${ticket.last_name || ''}</td>
                 <td>${ticket.phone || ''}</td>
-                <td>${ticket.seat_number || ''}</td>
+                <td>${ticket.seat_numbers || ticket.seat_number || ''}</td>
+                <td>${ticket.bus_type || ''}</td>
                 <td>${ticket.payment_method || ''}</td>
-               
+                <td>${ticket.payment_status === 'paid' ? 'پرداخت شده' : 'پرداخت نشده'}</td>
                 <td>${ticket.bus_details || ''}</td>
                 <td>${ticket.driver_details || ''}</td>
               </tr>
@@ -473,16 +503,17 @@ function ReadyTrips() {
     { header: "نام", accessor: "name" },
     { header: "تخلص", accessor: "last_name" },
     { header: "شماره تماس", accessor: "phone" },
+    { header: "نوع بس", accessor: "bus_type" },
+    { header: "نمبر سیت", accessor: "seat_numbers" },
     { header: "روش پرداخت", accessor: "payment_method" },
-    { header: "نمبر سیت", accessor: "seat_number" },
- 
+    { header: "وضعیت پرداخت", accessor: "payment_status" },
     { header: "بس", accessor: "bus_details" },
     { header: "راننده", accessor: "driver_details" },
   ];
 
   // Prepare table data (flatten trips+tickets)
   const tableData = filteredTrips.flatMap((trip) =>
-    trip.tickets.map((ticket) => ({
+    trip.tickets?.map((ticket) => ({
       id: ticket.id,
       from: trip.from,
       to: trip.to,
@@ -491,12 +522,16 @@ function ReadyTrips() {
       name: ticket.name,
       last_name: ticket.last_name,
       phone: ticket.phone,
+      bus_type: ticket.bus_type,
+      // Handle both seat_number and seat_numbers
+      seat_numbers: Array.isArray(ticket.seat_numbers) 
+        ? ticket.seat_numbers.join(', ') 
+        : ticket.seat_number || '',
       payment_method: ticket.payment_method,
-      seat_number: ticket.seat_number,
-    
+      payment_status: ticket.payment_status === 'paid' ? 'پرداخت شده' : 'پرداخت نشده',
       bus_details: getBusDetails(ticket.bus_id),
       driver_details: getDriverDetails(ticket.driver_id),
-    }))
+    })) || []
   );
 
   // Card data with Persian text
@@ -556,7 +591,7 @@ function ReadyTrips() {
               فیلتر تکت‌ها
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
               {/* Month Filter */}
               <div className="flex flex-col">
                 <label className="text-sm text-gray-600 mb-1">ماه</label>
@@ -622,6 +657,8 @@ function ReadyTrips() {
                 </select>
               </div>
               
+             
+              
               {/* Time Filter - Hour */}
               <div className="flex flex-col">
                 <label className="text-sm text-gray-600 mb-1">ساعت</label>
@@ -669,7 +706,26 @@ function ReadyTrips() {
                   <option value="PM">شب (PM)</option>
                 </select>
               </div>
+
+
+               {/* Bus Type Filter */}
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">نوع بس</label>
+                <select
+                  value={selectedBusType}
+                  onChange={(e) => setSelectedBusType(e.target.value)}
+                  className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">همه انواع</option>
+                  <option value="VIP">VIP</option>
+                  <option value="580">580</option>
+                </select>
+              </div>
+
+
             </div>
+
+
             
             <div className="flex justify-between items-center mt-2">
               <div className="text-sm text-[#0B2A5B]">
@@ -787,7 +843,7 @@ function ReadyTrips() {
               onView={(row) => console.log("View", row)}
               onEdit={(row) => console.log("Assign Driver/Bus", row)}
               onDelete={(row) => console.log("Delete", row)}
-            />
+            /> 
           </div>
         </div>
       </DashboardLayout>

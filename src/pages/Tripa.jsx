@@ -13,13 +13,14 @@ import {
   FaCalendarAlt,
   FaChevronRight,
   FaChevronLeft,
+  FaCrown,
+  FaShuttleVan,
+  FaMoneyBillWave,
 } from "react-icons/fa";
-import moment from "jalali-moment"; // ✅ Import jalali-moment
+import moment from "jalali-moment";
 
-// ✅ Vite: use import.meta.env
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Afghan month names in Dari
 const afghanMonths = {
   1: "حمل",
   2: "ثور",
@@ -35,7 +36,6 @@ const afghanMonths = {
   12: "حوت",
 };
 
-// Persian weekday names
 const persianWeekdays = [
   "شنبه",
   "یکشنبه",
@@ -46,15 +46,13 @@ const persianWeekdays = [
   "جمعه",
 ];
 
-// ✅ Persian Date Picker with restrictions
-const PersianDatePicker = ({ selectedDate, onDateChange }) => {
+const PersianDatePicker = ({ selectedDate, onDateChange, disabled = false }) => {
   const today = moment().locale("fa").format("jYYYY/jM/jD");
   const [todayYear, todayMonth, todayDay] = today.split("/").map(Number);
 
   const [currentYear, setCurrentYear] = useState(todayYear);
   const [currentMonth, setCurrentMonth] = useState(todayMonth);
 
-  // ✅ Calculate selectable range: today → today+5
   const selectableDays = Array.from({ length: 6 }, (_, i) =>
     moment(`${todayYear}/${todayMonth}/${todayDay}`, "jYYYY/jM/jD")
       .add(i, "day")
@@ -85,30 +83,29 @@ const PersianDatePicker = ({ selectedDate, onDateChange }) => {
   };
 
   const prevMonth = () => {
-    // Don’t allow going before today’s month
-    if (currentYear === todayYear && currentMonth === todayMonth) return;
+    if (disabled || (currentYear === todayYear && currentMonth === todayMonth)) return;
     setCurrentMonth((m) => (m === 1 ? 12 : m - 1));
   };
 
   const nextMonth = () => {
-    // Don’t allow going past the last selectable day
+    if (disabled) return;
     const [lastYear, lastMonth] = selectableDays[5].split("/").map(Number);
     if (currentYear === lastYear && currentMonth === lastMonth) return;
     setCurrentMonth((m) => (m === 12 ? 1 : m + 1));
   };
 
   const handleDaySelect = (day) => {
-    if (!isSelectable(day)) return;
+    if (disabled || !isSelectable(day)) return;
     onDateChange({ year: currentYear, month: currentMonth, day });
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-3 w-64 font-vazir">
-      {/* Header */}
+    <div className={`bg-white rounded-lg shadow-lg p-3 w-64 font-vazir ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex justify-between items-center mb-2">
         <button
           onClick={prevMonth}
-          className="p-1 rounded-full hover:bg-gray-100 text-sm"
+          disabled={disabled}
+          className="p-1 rounded-full hover:bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <FaChevronRight className="text-[#0B2A5B]" />
         </button>
@@ -122,13 +119,13 @@ const PersianDatePicker = ({ selectedDate, onDateChange }) => {
         </div>
         <button
           onClick={nextMonth}
-          className="p-1 rounded-full hover:bg-gray-100 text-sm"
+          disabled={disabled}
+          className="p-1 rounded-full hover:bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <FaChevronLeft className="text-[#0B2A5B]" />
         </button>
       </div>
 
-      {/* Days grid */}
       <div className="grid grid-cols-7 gap-1 text-xs">
         {persianWeekdays.map((day) => (
           <div key={day} className="text-center text-gray-500 py-1">
@@ -141,11 +138,11 @@ const PersianDatePicker = ({ selectedDate, onDateChange }) => {
             <button
               key={day}
               onClick={() => handleDaySelect(day)}
-              disabled={!selectable}
+              disabled={disabled || !selectable}
               className={`p-1 rounded-full text-center ${
                 isSelected(day)
                   ? "bg-[#F37021] text-white"
-                  : selectable
+                  : selectable && !disabled
                   ? "hover:bg-gray-100 text-[#0B2A5B]"
                   : "text-gray-300 cursor-not-allowed"
               }`}
@@ -156,17 +153,65 @@ const PersianDatePicker = ({ selectedDate, onDateChange }) => {
         })}
       </div>
 
-      {/* Selected date */}
-      {selectedDate && (
+      {selectedDate && !disabled && (
         <div className="mt-2 p-2 bg-gray-100 rounded-md text-center text-[#0B2A5B] text-xs">
           {`${selectedDate.year}/${selectedDate.month}/${selectedDate.day} - ${
             afghanMonths[selectedDate.month]
           }`}
         </div>
       )}
+      
+      {disabled && (
+        <div className="mt-2 p-2 bg-gray-100 rounded-md text-center text-gray-500 text-xs">
+          برای سفرهای همه روزه نیاز به انتخاب تاریخ نیست
+        </div>
+      )}
     </div>
   );
 };
+
+// Bus Type Checkbox Component
+const BusTypeCheckbox = ({ label, value, checked, onChange, icon, description }) => (
+  <label className="flex items-center justify-start p-3 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors">
+    <input
+      type="checkbox"
+      value={value}
+      checked={checked}
+      onChange={onChange}
+      className="ml-2 h-4 w-4 text-[#F37021] focus:ring-[#F37021] border-gray-300 rounded"
+    />
+    <div className="flex items-center">
+      <span className="text-[#F37021] ml-2">{icon}</span>
+      <div>
+        <div className="font-medium text-[#0B2A5B]">{label}</div>
+        <div className="text-xs text-gray-500">{description}</div>
+      </div>
+    </div>
+  </label>
+);
+
+// Price Input Component
+const PriceInput = ({ label, value, onChange, disabled, icon, required }) => (
+  <div className="text-right">
+    <label className="block mb-1 font-semibold text-[#0B2A5B] flex items-center gap-2 justify-end">
+      {required && <span className="text-red-500">*</span>}
+      {label}
+      {icon && <span className="text-orange-500">{icon}</span>}
+    </label>
+    <input
+      type="number"
+      value={value || ''}
+      onChange={onChange}
+      disabled={disabled}
+      placeholder="قیمت به افغانی"
+      required={required && !disabled}
+      dir="rtl"
+      className={`w-full border rounded-md py-2 pr-10 pl-3 text-right focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+        disabled ? 'bg-gray-100 text-gray-400' : 'border-gray-300'
+      }`}
+    />
+  </div>
+);
 
 export default function Tripa() {
   const navigate = useNavigate();
@@ -177,10 +222,15 @@ export default function Tripa() {
   const [selectedJalaliDate, setSelectedJalaliDate] = useState(null);
   const [editingTrip, setEditingTrip] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [busTypes, setBusTypes] = useState([]);
+  const [priceVip, setPriceVip] = useState('');
+  const [price580, setPrice580] = useState('');
+  const [allDays, setAllDays] = useState(false);
+  const [formData, setFormData] = useState({});
 
   const token = sessionStorage.getItem("auth_token");
 
-  // Table columns
+  // Update table columns to show prices correctly
   const columns = [
     { header: "از", accessor: "from" },
     { header: "به", accessor: "to" },
@@ -188,7 +238,53 @@ export default function Tripa() {
     { header: "زمان حرکت", accessor: "departure_time_ampm" },
     { header: "ترمینال حرکت", accessor: "departure_terminal" },
     { header: "ترمینال رسید", accessor: "arrival_terminal" },
-    { header: "قیمت (افغانی)", accessor: "price" },
+    {
+      header: "قیمت ها",
+      accessor: "prices",
+      render: (row) => (
+        <div className="flex flex-col gap-1">
+          {row.prices?.VIP && (
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">VIP</span>
+              <span>{row.prices.VIP} افغانی</span>
+            </div>
+          )}
+          {row.prices?.["580"] && (
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">۵۸۰</span>
+              <span>{row.prices["580"]} افغانی</span>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: "نوع اتوبوس",
+      accessor: "bus_type",
+      render: (row) => (
+        <div className="flex flex-wrap gap-1">
+          {Array.isArray(row.bus_type) && row.bus_type.map(type => (
+            <span key={type} className="px-2 py-1 bg-[#F37021] text-white text-xs rounded-full">
+              {type === "VIP" ? "VIP" : "۵۸۰"}
+            </span>
+          ))}
+        </div>
+      ),
+    },
+
+     // Add all_days column
+  {
+    header: "همه روزها",
+    accessor: "all_days",
+    render: (row) => (
+      <span className={`px-2 py-1 rounded-full text-xs ${
+        row.all_days ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+      }`}>
+        {row.all_days ? "بله" : "خیر"}
+      </span>
+    ),
+  },
+
     {
       header: "تاریخ ایجاد",
       accessor: "created_at",
@@ -199,7 +295,7 @@ export default function Tripa() {
     },
   ];
 
-  // Form fields
+  // Form fields (removed the single price field)
   const fields = useMemo(
     () => [
       {
@@ -239,14 +335,12 @@ export default function Tripa() {
         icon: <FaBus />,
         required: true,
       },
-      {
-        label: "قیمت (افغانی)",
-        name: "price",
-        type: "number",
-        placeholder: "مثال: 500",
-        icon: <FaBus />,
-        required: true,
-      },
+       {
+      name: "all_days",
+      label: "همه روزها",
+      type: "checkbox",
+      placeholder: "این سفر برای همه روزها فعال باشد"
+    }
     ],
     []
   );
@@ -278,25 +372,97 @@ export default function Tripa() {
     fetchTrips();
   }, []);
 
+  // Handle bus type selection
+  const handleBusTypeChange = (type) => {
+    const newBusTypes = busTypes.includes(type) 
+      ? busTypes.filter(t => t !== type)
+      : [...busTypes, type];
+    
+    setBusTypes(newBusTypes);
+    
+    // Clear prices when bus type is deselected
+    if (!newBusTypes.includes("VIP")) setPriceVip('');
+    if (!newBusTypes.includes("580")) setPrice580('');
+  };
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isModalOpen) {
+      setBusTypes([]);
+      setPriceVip('');
+      setPrice580('');
+      setAllDays(false);
+      setFormData({});
+    }
+  }, [isModalOpen]);
+
+  // Set initial values when editing
+  useEffect(() => {
+    if (editingTrip) {
+      if (editingTrip.prices) {
+        setPriceVip(editingTrip.prices.VIP || '');
+        setPrice580(editingTrip.prices["580"] || '');
+      }
+      setAllDays(editingTrip.all_days || false);
+      
+      // Set initial form data for the modal
+      const initialFormData = {};
+      fields.forEach(field => {
+        initialFormData[field.name] = editingTrip[field.name] || '';
+      });
+      setFormData(initialFormData);
+    }
+  }, [editingTrip]);
+
+  // Handle form field changes from the modal
+  const handleFormFieldChange = (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    if (name === 'all_days') {
+      setAllDays(value);
+    }
+  };
+
   // Add trip
-  const handleAddTrip = async (formData) => {
+  const handleAddTrip = async (formDataFromModal) => {
     if (!token) return toast.error("توکن معتبر موجود نیست.");
-    if (!selectedJalaliDate)
+    
+    // Don't require date selection if it's an all_days trip
+    if (!allDays && !selectedJalaliDate)
       return toast.error("لطفاً تاریخ سفر را انتخاب کنید.");
+    
+    if (busTypes.length === 0)
+      return toast.error("لطفاً حداقل یک نوع اتوبوس انتخاب کنید.");
+    
+    // Validate prices based on selected bus types
+    if (busTypes.includes("VIP") && !priceVip)
+      return toast.error("لطفاً قیمت اتوبوس VIP را وارد کنید.");
+    if (busTypes.includes("580") && !price580)
+      return toast.error("لطفاً قیمت اتوبوس ۵۸۰ را وارد کنید.");
 
     try {
       const payload = {
-        ...formData,
-        departure_date_jalali: selectedJalaliDate,
-        price: Number(formData.price),
+        ...formDataFromModal,
+        all_days: allDays,
+        departure_date_jalali: allDays ? null : selectedJalaliDate,
+        bus_type: busTypes,
+        price_vip: priceVip ? Number(priceVip) : null,
+        price_580: price580 ? Number(price580) : null,
       };
+      
       const res = await axios.post(`${API_BASE_URL}/api/trips`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
       setTrips((prev) => [res.data.trip, ...prev]);
       setIsModalOpen(false);
       setSelectedJalaliDate(null);
       setShowDatePicker(false);
+      setBusTypes([]);
+      setPriceVip('');
+      setPrice580('');
+      setAllDays(false);
+      setFormData({});
       toast.success("سفر جدید با موفقیت اضافه شد.");
     } catch (err) {
       console.error(err);
@@ -307,26 +473,62 @@ export default function Tripa() {
   // Edit trip
   const handleEditTrip = (trip) => {
     setEditingTrip(trip);
-    const [year, month, day] = trip.departure_date.split("-").map(Number);
-    setSelectedJalaliDate({ year, month, day });
+    
+    // Set date only if it's not an all_days trip
+    if (!trip.all_days && trip.departure_date) {
+      const [year, month, day] = trip.departure_date.split("-").map(Number);
+      setSelectedJalaliDate({ year, month, day });
+    } else {
+      setSelectedJalaliDate(null);
+    }
+    
+    setBusTypes(Array.isArray(trip.bus_type) ? trip.bus_type : []);
+    setAllDays(trip.all_days || false);
+    
+    // Set initial form data for the modal
+    const initialFormData = {};
+    fields.forEach(field => {
+      initialFormData[field.name] = trip[field.name] || '';
+    });
+    setFormData(initialFormData);
+    
     setIsModalOpen(true);
   };
 
   // Update trip
-  const handleUpdateTrip = async (formData) => {
+  const handleUpdateTrip = async (formDataFromModal) => {
     if (!token) return toast.error("توکن معتبر موجود نیست.");
     if (!editingTrip) return;
+    
+    // Don't require date selection if it's an all_days trip
+    if (!allDays && !selectedJalaliDate)
+      return toast.error("لطفاً تاریخ سفر را انتخاب کنید.");
+    
+    if (busTypes.length === 0)
+      return toast.error("لطفاً حداقل یک نوع اتوبוס انتخاب کنید.");
+    
+    // Validate prices based on selected bus types
+    if (busTypes.includes("VIP") && !priceVip)
+      return toast.error("لطفاً قیمت اتوبوس VIP را وارد کنید.");
+    if (busTypes.includes("580") && !price580)
+      return toast.error("لطفاً قیمت اتوبوس ۵۸۰ را وارد کنید.");
+
     try {
       const payload = {
-        ...formData,
-        departure_date_jalali: selectedJalaliDate,
-        price: Number(formData.price),
+        ...formDataFromModal,
+        all_days: allDays,
+        departure_date_jalali: allDays ? null : selectedJalaliDate,
+        bus_type: busTypes,
+        price_vip: priceVip ? Number(priceVip) : null,
+        price_580: price580 ? Number(price580) : null,
       };
+      
       const res = await axios.put(
         `${API_BASE_URL}/api/trips/${editingTrip.id}`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
       setTrips((prev) =>
         prev.map((t) => (t.id === res.data.trip.id ? res.data.trip : t))
       );
@@ -334,7 +536,12 @@ export default function Tripa() {
       setEditingTrip(null);
       setSelectedJalaliDate(null);
       setShowDatePicker(false);
-      toast.success("سفر با موفقیت ویرایش شد.");
+      setBusTypes([]);
+      setPriceVip('');
+      setPrice580('');
+      setAllDays(false);
+      setFormData({});
+      toast.success("سفر با успеیت ویرایش شد.");
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message || "خطا در ویرایش سفر.");
@@ -372,8 +579,13 @@ export default function Tripa() {
               const [y, m, d] = today.split("/").map(Number);
               setIsModalOpen(true);
               setEditingTrip(null);
-              setSelectedJalaliDate({ year: y, month: m, day: d }); // ✅ auto-select today
+              setSelectedJalaliDate({ year: y, month: m, day: d });
               setShowDatePicker(false);
+              setBusTypes([]);
+              setPriceVip('');
+              setPrice580('');
+              setAllDays(false);
+              setFormData({});
             }}
             className="bg-[#F37021] text-white px-4 py-2 rounded hover:bg-orange-600 transition"
           >
@@ -389,7 +601,6 @@ export default function Tripa() {
           onDelete={handleDeleteTrip}
         />
 
-        {/* Modal */}
         <CustomFormModal
           isOpen={isModalOpen}
           onClose={() => {
@@ -397,21 +608,80 @@ export default function Tripa() {
             setEditingTrip(null);
             setSelectedJalaliDate(null);
             setShowDatePicker(false);
+            setBusTypes([]);
+            setPriceVip('');
+            setPrice580('');
+            setAllDays(false);
+            setFormData({});
           }}
           onSubmit={editingTrip ? handleUpdateTrip : handleAddTrip}
           title={editingTrip ? "ویرایش سفر" : "افزودن سفر جدید"}
           titleIcon={<FaBus />}
           fields={fields}
-          initialData={editingTrip || {}}
+          initialData={editingTrip || formData}
+          onFieldChange={handleFormFieldChange}
         >
+          {/* Bus Type Selection */}
+          <div className="sm:col-span-2">
+            <label className="block mb-2 font-semibold text-[#0B2A5B]">
+              نوع اتوبوس *
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+              <BusTypeCheckbox
+                label="اتوبوس VIP"
+                value="VIP"
+                checked={busTypes.includes("VIP")}
+                onChange={() => handleBusTypeChange("VIP")}
+                icon={<FaCrown />}
+                description="اتوبوس لوکس با امکانات کامل"
+              />
+              <BusTypeCheckbox
+                label="اتوبوس ۵۸۰"
+                value="580"
+                checked={busTypes.includes("580")}
+                onChange={() => handleBusTypeChange("580")}
+                icon={<FaShuttleVan />}
+                description="اتوبوس استاندارد و اقتصادی"
+              />
+            </div>
+            {busTypes.length === 0 && (
+              <p className="text-red-600 text-sm mt-1">
+                لطفاً حداقل یک نوع اتوبוס انتخاب کنید
+              </p>
+            )}
+          </div>
+
+          {/* Price Inputs */}
+          <div className="sm:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <PriceInput
+              label="قیمت اتوبوس VIP (افغانی)"
+              value={priceVip}
+              onChange={(e) => setPriceVip(e.target.value)}
+              disabled={!busTypes.includes("VIP")}
+              icon={<FaMoneyBillWave />}
+              required={busTypes.includes("VIP")}
+            />
+            <PriceInput
+              label="قیمت اتوبوس ۵۸۰ (افغانی)"
+              value={price580}
+              onChange={(e) => setPrice580(e.target.value)}
+              disabled={!busTypes.includes("580")}
+              icon={<FaMoneyBillWave />}
+              required={busTypes.includes("580")}
+            />
+          </div>
+
+          {/* Date Picker */}
           <div className="sm:col-span-2 relative">
             <label className="block mb-1 font-semibold text-[#0B2A5B] flex items-center gap-2">
               <FaCalendarAlt className="text-orange-500" />
-              تاریخ سفر
+              تاریخ سفر {allDays && "(غیرفعال برای سفرهای همه روزه)"}
             </label>
             <div
-              className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer flex justify-between items-center"
-              onClick={() => setShowDatePicker(!showDatePicker)}
+              className={`w-full border border-gray-300 rounded-md px-3 py-2 flex justify-between items-center ${
+                allDays ? 'bg-gray-100 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+              onClick={() => !allDays && setShowDatePicker(!showDatePicker)}
             >
               {selectedJalaliDate ? (
                 <span className="text-[#0B2A5B]">
@@ -420,11 +690,13 @@ export default function Tripa() {
                   }`}
                 </span>
               ) : (
-                <span className="text-gray-400">تاریخ سفر را انتخاب کنید</span>
+                <span className={allDays ? "text-gray-400" : "text-gray-400"}>
+                  {allDays ? "نیاز به انتخاب تاریخ نیست" : "تاریخ سفر را انتخاب کنید"}
+                </span>
               )}
-              <FaCalendarAlt className="text-orange-500" />
+              <FaCalendarAlt className={allDays ? "text-gray-400" : "text-orange-500"} />
             </div>
-            {showDatePicker && (
+            {showDatePicker && !allDays && (
               <div className="absolute z-10 bottom-full right-0 mb-2">
                 <PersianDatePicker
                   selectedDate={selectedJalaliDate}
@@ -432,6 +704,7 @@ export default function Tripa() {
                     setSelectedJalaliDate(date);
                     setShowDatePicker(false);
                   }}
+                  disabled={allDays}
                 />
               </div>
             )}
