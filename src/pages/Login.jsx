@@ -36,7 +36,7 @@ export default function Login() {
       sessionStorage.setItem("logo_url", company.logo_url);
 
       toast.success("ورود موفقیت‌آمیز بود");
-      navigate("/");
+      navigate("/chalans");
     } catch (err) {
       toast.error(err.response?.data?.message || "ورود ناموفق بود");
     } finally {
