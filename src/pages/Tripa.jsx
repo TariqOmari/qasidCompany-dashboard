@@ -200,16 +200,20 @@ const PriceInput = ({ label, value, onChange, disabled, icon, required }) => (
     </label>
     <input
       type="number"
+      min="1"
       value={value || ''}
       onChange={onChange}
       disabled={disabled}
-      placeholder="قیمت به افغانی"
+      placeholder={disabled ? "غیرفعال" : "قیمت به افغانی"}
       required={required && !disabled}
       dir="rtl"
       className={`w-full border rounded-md py-2 pr-10 pl-3 text-right focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-        disabled ? 'bg-gray-100 text-gray-400' : 'border-gray-300'
+        disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'border-gray-300'
       }`}
     />
+    {required && !disabled && (!value || value === '') && (
+      <p className="text-red-600 text-xs mt-1">این فیلد الزامی است</p>
+    )}
   </div>
 );
 
@@ -271,20 +275,17 @@ export default function Tripa() {
         </div>
       ),
     },
-
-     // Add all_days column
-  {
-    header: "همه روزها",
-    accessor: "all_days",
-    render: (row) => (
-      <span className={`px-2 py-1 rounded-full text-xs ${
-        row.all_days ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-      }`}>
-        {row.all_days ? "بله" : "خیر"}
-      </span>
-    ),
-  },
-
+    {
+      header: "همه روزها",
+      accessor: "all_days",
+      render: (row) => (
+        <span className={`px-2 py-1 rounded-full text-xs ${
+          row.all_days ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+        }`}>
+          {row.all_days ? "بله" : "خیر"}
+        </span>
+      ),
+    },
     {
       header: "تاریخ ایجاد",
       accessor: "created_at",
@@ -295,7 +296,7 @@ export default function Tripa() {
     },
   ];
 
-  // Form fields (removed the single price field)
+  // Form fields
   const fields = useMemo(
     () => [
       {
@@ -335,12 +336,12 @@ export default function Tripa() {
         icon: <FaBus />,
         required: true,
       },
-       {
-      name: "all_days",
-      label: "همه روزها",
-      type: "checkbox",
-      placeholder: "این سفر برای همه روزها فعال باشد"
-    }
+      {
+        name: "all_days",
+        label: "همه روزها",
+        type: "checkbox",
+        placeholder: "این سفر برای همه روزها فعال باشد"
+      }
     ],
     []
   );
@@ -374,11 +375,20 @@ export default function Tripa() {
 
   // Handle bus type selection
   const handleBusTypeChange = (type) => {
+    console.log("=== BUS TYPE CHANGE DEBUG ===");
+    console.log("Changing bus type:", type);
+    console.log("Current bus types:", busTypes);
+    console.log("Current VIP price:", priceVip);
+    console.log("Current 580 price:", price580);
+    
     const newBusTypes = busTypes.includes(type) 
       ? busTypes.filter(t => t !== type)
       : [...busTypes, type];
     
     setBusTypes(newBusTypes);
+    
+    console.log("New bus types:", newBusTypes);
+    console.log("=== END BUS TYPE DEBUG ===");
     
     // Clear prices when bus type is deselected
     if (!newBusTypes.includes("VIP")) setPriceVip('');
@@ -399,10 +409,20 @@ export default function Tripa() {
   // Set initial values when editing
   useEffect(() => {
     if (editingTrip) {
-      if (editingTrip.prices) {
-        setPriceVip(editingTrip.prices.VIP || '');
-        setPrice580(editingTrip.prices["580"] || '');
-      }
+      console.log("=== EDIT INITIALIZATION DEBUG ===");
+      console.log("Editing trip:", editingTrip);
+      console.log("Current bus types:", editingTrip.bus_type);
+      console.log("Current prices:", editingTrip.prices);
+      console.log("=== END EDIT INIT DEBUG ===");
+      
+      // Set bus types first
+      const initialBusTypes = Array.isArray(editingTrip.bus_type) ? editingTrip.bus_type : [];
+      setBusTypes(initialBusTypes);
+      
+      // Then set prices - ensure we have proper values
+      setPriceVip(editingTrip.prices?.VIP?.toString() || '');
+      setPrice580(editingTrip.prices?.["580"]?.toString() || '');
+      
       setAllDays(editingTrip.all_days || false);
       
       // Set initial form data for the modal
@@ -424,55 +444,73 @@ export default function Tripa() {
   };
 
   // Add trip
-  const handleAddTrip = async (formDataFromModal) => {
-    if (!token) return toast.error("توکن معتبر موجود نیست.");
-    
-    // Don't require date selection if it's an all_days trip
-    if (!allDays && !selectedJalaliDate)
-      return toast.error("لطفاً تاریخ سفر را انتخاب کنید.");
-    
-    if (busTypes.length === 0)
-      return toast.error("لطفاً حداقل یک نوع اتوبوس انتخاب کنید.");
-    
-    // Validate prices based on selected bus types
-    if (busTypes.includes("VIP") && !priceVip)
-      return toast.error("لطفاً قیمت اتوبوس VIP را وارد کنید.");
-    if (busTypes.includes("580") && !price580)
-      return toast.error("لطفاً قیمت اتوبوس ۵۸۰ را وارد کنید.");
+// Add trip - FIXED to handle bus type selection properly
+const handleAddTrip = async (formDataFromModal) => {
+  if (!token) return toast.error("توکن معتبر موجود نیست.");
+  
+  // Don't require date selection if it's an all_days trip
+  if (!allDays && !selectedJalaliDate)
+    return toast.error("لطفاً تاریخ سفر را انتخاب کنید.");
+  
+  if (busTypes.length === 0)
+    return toast.error("لطفاً حداقل یک نوع اتوبوس انتخاب کنید.");
+  
+  // Validate prices based on selected bus types
+  if (busTypes.includes("VIP") && (!priceVip || isNaN(Number(priceVip)) || Number(priceVip) <= 0))
+    return toast.error("لطفاً قیمت معتبر برای اتوبوس VIP وارد کنید.");
+  
+  if (busTypes.includes("580") && (!price580 || isNaN(Number(price580)) || Number(price580) <= 0))
+    return toast.error("لطفاً قیمت معتبر برای اتوبوس ۵۸۰ را وارد کنید.");
 
-    try {
-      const payload = {
-        ...formDataFromModal,
-        all_days: allDays,
-        departure_date_jalali: allDays ? null : selectedJalaliDate,
-        bus_type: busTypes,
-        price_vip: priceVip ? Number(priceVip) : null,
-        price_580: price580 ? Number(price580) : null,
-      };
-      
-      const res = await axios.post(`${API_BASE_URL}/api/trips`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      setTrips((prev) => [res.data.trip, ...prev]);
-      setIsModalOpen(false);
-      setSelectedJalaliDate(null);
-      setShowDatePicker(false);
-      setBusTypes([]);
-      setPriceVip('');
-      setPrice580('');
-      setAllDays(false);
-      setFormData({});
-      toast.success("سفر جدید با موفقیت اضافه شد.");
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "خطا در ایجاد سفر.");
+  try {
+    const payload = {
+      ...formDataFromModal,
+      all_days: allDays,
+      departure_date_jalali: allDays ? null : selectedJalaliDate,
+      bus_type: busTypes,
+    };
+
+    // ✅ FIX: Only include prices for SELECTED bus types
+    if (busTypes.includes("VIP")) {
+      payload.price_vip = Number(priceVip);
     }
-  };
-
+    if (busTypes.includes("580")) {
+      payload.price_580 = Number(price580);
+    }
+    // Don't include price fields for unselected bus types
+    
+    console.log("=== ADD TRIP PAYLOAD ===");
+    console.log("Payload:", payload);
+    console.log("=== END ADD TRIP PAYLOAD ===");
+    
+    const res = await axios.post(`${API_BASE_URL}/api/trips`, payload, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    
+    setTrips((prev) => [res.data.trip, ...prev]);
+    setIsModalOpen(false);
+    setSelectedJalaliDate(null);
+    setShowDatePicker(false);
+    setBusTypes([]);
+    setPriceVip('');
+    setPrice580('');
+    setAllDays(false);
+    setFormData({});
+    toast.success("سفر جدید با موفقیت اضافه شد.");
+  } catch (err) {
+    console.error(err);
+    toast.error(err.response?.data?.message || "خطا در ایجاد سفر.");
+  }
+};
   // Edit trip
   const handleEditTrip = (trip) => {
     setEditingTrip(trip);
+    
+    console.log("=== START EDIT TRIP DEBUG ===");
+    console.log("Editing trip:", trip);
+    console.log("Current bus types:", trip.bus_type);
+    console.log("Current prices:", trip.prices);
+    console.log("=== END EDIT TRIP DEBUG ===");
     
     // Set date only if it's not an all_days trip
     if (!trip.all_days && trip.departure_date) {
@@ -482,7 +520,14 @@ export default function Tripa() {
       setSelectedJalaliDate(null);
     }
     
-    setBusTypes(Array.isArray(trip.bus_type) ? trip.bus_type : []);
+    // Set bus types FIRST
+    const initialBusTypes = Array.isArray(trip.bus_type) ? trip.bus_type : [];
+    setBusTypes(initialBusTypes);
+    
+    // THEN set prices - ensure we have proper values for all bus types
+    setPriceVip(trip.prices?.VIP?.toString() || '');
+    setPrice580(trip.prices?.["580"]?.toString() || '');
+    
     setAllDays(trip.all_days || false);
     
     // Set initial form data for the modal
@@ -495,59 +540,87 @@ export default function Tripa() {
     setIsModalOpen(true);
   };
 
-  // Update trip
-  const handleUpdateTrip = async (formDataFromModal) => {
-    if (!token) return toast.error("توکن معتبر موجود نیست.");
-    if (!editingTrip) return;
-    
-    // Don't require date selection if it's an all_days trip
-    if (!allDays && !selectedJalaliDate)
-      return toast.error("لطفاً تاریخ سفر را انتخاب کنید.");
-    
-    if (busTypes.length === 0)
-      return toast.error("لطفاً حداقل یک نوع اتوبוס انتخاب کنید.");
-    
-    // Validate prices based on selected bus types
-    if (busTypes.includes("VIP") && !priceVip)
-      return toast.error("لطفاً قیمت اتوبوس VIP را وارد کنید.");
-    if (busTypes.includes("580") && !price580)
-      return toast.error("لطفاً قیمت اتوبوس ۵۸۰ را وارد کنید.");
+  // Update trip - FIXED with comprehensive debugging
+  // Update trip - FIXED to handle bus type removal
+const handleUpdateTrip = async (formDataFromModal) => {
+  if (!token) return toast.error("توکن معتبر موجود نیست.");
+  if (!editingTrip) return;
+  
+  // Don't require date selection if it's an all_days trip
+  if (!allDays && !selectedJalaliDate)
+    return toast.error("لطفاً تاریخ سفر را انتخاب کنید.");
+  
+  if (busTypes.length === 0)
+    return toast.error("لطفاً حداقل یک نوع اتوبوس انتخاب کنید.");
+  
+  // Validate prices based on selected bus types ONLY
+  if (busTypes.includes("VIP") && (!priceVip || isNaN(Number(priceVip)) || Number(priceVip) <= 0))
+    return toast.error("لطفاً قیمت معتبر برای اتوبوس VIP وارد کنید.");
+  
+  if (busTypes.includes("580") && (!price580 || isNaN(Number(price580)) || Number(price580) <= 0))
+    return toast.error("لطفاً قیمت معتبر برای اتوبوس ۵۸۰ را وارد کنید.");
 
-    try {
-      const payload = {
-        ...formDataFromModal,
-        all_days: allDays,
-        departure_date_jalali: allDays ? null : selectedJalaliDate,
-        bus_type: busTypes,
-        price_vip: priceVip ? Number(priceVip) : null,
-        price_580: price580 ? Number(price580) : null,
-      };
-      
-      const res = await axios.put(
-        `${API_BASE_URL}/api/trips/${editingTrip.id}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setTrips((prev) =>
-        prev.map((t) => (t.id === res.data.trip.id ? res.data.trip : t))
-      );
-      setIsModalOpen(false);
-      setEditingTrip(null);
-      setSelectedJalaliDate(null);
-      setShowDatePicker(false);
-      setBusTypes([]);
-      setPriceVip('');
-      setPrice580('');
-      setAllDays(false);
-      setFormData({});
-      toast.success("سفر با успеیت ویرایش شد.");
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "خطا در ویرایش سفر.");
+  try {
+    const payload = {
+      ...formDataFromModal,
+      all_days: allDays,
+      departure_date_jalali: allDays ? null : selectedJalaliDate,
+      bus_type: busTypes,
+    };
+
+    // ✅ FIX: Only include prices for SELECTED bus types
+    // Don't send price fields for deselected bus types
+    if (busTypes.includes("VIP")) {
+      payload.price_vip = Number(priceVip);
+      console.log("✅ Adding VIP price:", Number(priceVip));
     }
-  };
+    // Don't include price_580 if 580 bus type is not selected
+    if (busTypes.includes("580")) {
+      payload.price_580 = Number(price580);
+      console.log("✅ Adding 580 price:", Number(price580));
+    }
+    // If bus type is not selected, don't include its price field at all
 
+    console.log("=== UPDATE TRIP DEBUG ===");
+    console.log("Editing trip ID:", editingTrip.id);
+    console.log("Selected bus types:", busTypes);
+    console.log("VIP price input:", priceVip, "->", Number(priceVip));
+    console.log("580 price input:", price580, "->", Number(price580));
+    console.log("Full payload being sent:", JSON.stringify(payload, null, 2));
+    console.log("=== END UPDATE DEBUG ===");
+    
+    const res = await axios.put(
+      `${API_BASE_URL}/api/trips/${editingTrip.id}`,
+      payload,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    
+    console.log("=== BACKEND RESPONSE ===");
+    console.log("Backend response:", res.data);
+    console.log("Updated trip prices:", res.data.trip?.prices);
+    console.log("=== END BACKEND RESPONSE ===");
+    
+    setTrips((prev) =>
+      prev.map((t) => (t.id === res.data.trip.id ? res.data.trip : t))
+    );
+    setIsModalOpen(false);
+    setEditingTrip(null);
+    setSelectedJalaliDate(null);
+    setShowDatePicker(false);
+    setBusTypes([]);
+    setPriceVip('');
+    setPrice580('');
+    setAllDays(false);
+    setFormData({});
+    toast.success("سفر با موفقیت ویرایش شد.");
+  } catch (err) {
+    console.error("=== UPDATE ERROR ===");
+    console.error("Update error:", err);
+    console.error("Error response:", err.response?.data);
+    console.error("=== END UPDATE ERROR ===");
+    toast.error(err.response?.data?.message || "خطا در ویرایش سفر.");
+  }
+};
   // Delete trip
   const handleDeleteTrip = async (trip) => {
     if (!trip || !trip.id) return toast.error("شناسه سفر معتبر نیست.");
@@ -646,7 +719,7 @@ export default function Tripa() {
             </div>
             {busTypes.length === 0 && (
               <p className="text-red-600 text-sm mt-1">
-                لطفاً حداقل یک نوع اتوبוס انتخاب کنید
+                لطفاً حداقل یک نوع اتوبوس انتخاب کنید
               </p>
             )}
           </div>
