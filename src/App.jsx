@@ -12,10 +12,18 @@ import Tripa from "./pages/Tripa";
 import ProtectedRoute from "./components/ProtectedRoutes";
 import TripDetails from "./pages/TripDetails";
 import ReadyTrips from "./pages/ReadyTrips";
+import { LanguageProvider } from "./contexts/LanguageContext.jsX";
+import Incomes from "./pages/Incomes";
+import Copones from "./pages/Copones";
+import RatingsLink from "./pages/RatingsLink";
+import TicketPrint from "./components/TicketPrint";
 
 function App() {
   return (
+    <LanguageProvider>
+
     <BrowserRouter>
+
       <Routes>
         {/* Public route */}
         <Route path="/login" element={<Login />} />
@@ -104,12 +112,70 @@ function App() {
           }
         />
 
+        <Route
+          path="/incomes"
+          element={
+            <ProtectedRoute>
+              <Incomes/>
+            </ProtectedRoute>
+          }
+
+          />
+
+          <Route
+          path="/copones"
+          element={
+            <ProtectedRoute>
+              <Copones/>
+            </ProtectedRoute>
+          }
+
+
+        />
+
+
+
+         <Route
+          path="/generate-link"
+          element={
+            <ProtectedRoute>
+              <RatingsLink/>
+            </ProtectedRoute>
+          }
+
+
+        />
+
+        
+         <Route
+          path="/ticketprint"
+          element={
+            <ProtectedRoute>
+              <TicketPrint/>
+            </ProtectedRoute>
+          }
+
+
+        />
+
+       <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <History/>
+            </ProtectedRoute>
+          }
+
+
+        />
+
 
 
 
 
       </Routes>
     </BrowserRouter>
+  </LanguageProvider>
   );
 }
 

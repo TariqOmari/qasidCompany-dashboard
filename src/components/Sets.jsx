@@ -1,5 +1,6 @@
 import React from 'react';
 import { GiSteeringWheel } from 'react-icons/gi';
+import './Set.css'
 
 export default function Sets({ selectedSeat, setSelectedSeat }) {
   const totalSeats = 35;

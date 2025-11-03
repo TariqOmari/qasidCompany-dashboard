@@ -1,0 +1,127 @@
+/* --- Bus Container --- */
+.bus-container {
+  max-width: 420px;
+  margin: 20px auto;
+  text-align: center;
+  font-family: sans-serif;
+  direction: rtl;
+}
+
+/* --- Legend --- */
+.title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.legend-box {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  margin-left: 5px;
+}
+
+.selected {
+  background: #007bff;
+}
+
+.empty {
+  background: #f0f0f0;
+}
+
+.occupied {
+  background: #dc2626;
+}
+
+/* --- Bus Layout --- */
+.bus-layout {
+  display: grid;
+  grid-auto-rows: min-content;
+  row-gap: 6px;
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Driver Row --- */
+.driver-door-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 0 10px;
+}
+
+.driver {
+  font-size: 40px;
+  font-weight: bold;
+}
+
+.door1 {
+  background-color: rgb(202, 200, 200);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+/* --- Seat Rows --- */
+.seat-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+/* --- Seat Styling --- */
+.seat {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.seat:hover {
+  background: #f3f4f6;
+}
+
+.seat.selected {
+  background: #007bff;
+  color: white;
+}
+
+.seat.occupied {
+  background: #dc2626;
+  color: white;
+  cursor: not-allowed;
+}
+
+.empty-space {
+  background: transparent;
+}
+
+/* --- WC and Door --- */
+.wc,
+.door {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  background-color: rgb(202, 200, 200);
+  border-radius: 10px;
+  grid-column: span 2;
+  height: 60px !important; /* ⬅ reduced from 80px */
+}
+

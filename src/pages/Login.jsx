@@ -22,7 +22,7 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      const res = await axios.post(`${Login_Base_URL}`, {
+      const res = await axios.post(`${Login_Base_URL}/api/companies/login`, {
         username,
         password,
       });

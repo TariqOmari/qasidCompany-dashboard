@@ -114,6 +114,8 @@ const CustomFormModal = ({
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black transition-all duration-300
         ${isOpen ? 'bg-opacity-40 visible opacity-100' : 'bg-opacity-0 invisible opacity-0 pointer-events-none'}`}
+
+        dir='ltr'
     >
       <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6 font-vazir text-right max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold mb-6 text-[#0B2A5B] flex items-center gap-2 justify-end">
