@@ -16,6 +16,8 @@ import {
   FaCrown,
   FaShuttleVan,
   FaMoneyBillWave,
+  FaCalendarPlus,
+  FaTimes,
 } from "react-icons/fa";
 import moment from "jalali-moment";
 import { useLanguage } from "../contexts/LanguageContext.jsX";
@@ -48,7 +50,15 @@ const persianWeekdays = [
   "جمعه",
 ];
 
-const PersianDatePicker = ({ selectedDate, onDateChange, disabled = false }) => {
+// Enhanced Persian Date Picker with Range Selection
+const PersianDatePicker = ({ 
+  selectedDates = [], 
+  onDateChange, 
+  disabled = false,
+  isRange = false,
+  maxSelectableDays = 30,
+  onClose 
+}) => {
   const { language } = useLanguage();
   const t = translations[language];
   
@@ -58,7 +68,8 @@ const PersianDatePicker = ({ selectedDate, onDateChange, disabled = false }) => 
   const [currentYear, setCurrentYear] = useState(todayYear);
   const [currentMonth, setCurrentMonth] = useState(todayMonth);
 
-  const selectableDays = Array.from({ length: 6 }, (_, i) =>
+  // Generate selectable days for the next 6 months
+  const selectableDays = Array.from({ length: 180 }, (_, i) =>
     moment(`${todayYear}/${todayMonth}/${todayDay}`, "jYYYY/jM/jD")
       .add(i, "day")
       .format("jYYYY/jM/jD")
@@ -79,41 +90,97 @@ const PersianDatePicker = ({ selectedDate, onDateChange, disabled = false }) => 
   };
 
   const isSelected = (day) => {
-    return (
-      selectedDate &&
-      selectedDate.year === currentYear &&
-      selectedDate.month === currentMonth &&
-      selectedDate.day === day
+    const dateStr = `${currentYear}/${currentMonth}/${day}`;
+    return selectedDates.some(date => 
+      date.year === currentYear && 
+      date.month === currentMonth && 
+      date.day === day
     );
+  };
+
+  const canSelectMore = () => {
+    return selectedDates.length < maxSelectableDays;
   };
 
   const prevMonth = () => {
     if (disabled || (currentYear === todayYear && currentMonth === todayMonth)) return;
     setCurrentMonth((m) => (m === 1 ? 12 : m - 1));
+    if (currentMonth === 1) setCurrentYear(y => y - 1);
   };
 
   const nextMonth = () => {
     if (disabled) return;
-    const [lastYear, lastMonth] = selectableDays[5].split("/").map(Number);
+    const lastSelectable = moment(selectableDays[selectableDays.length - 1], "jYYYY/jM/jD");
+    const lastYear = lastSelectable.jYear();
+    const lastMonth = lastSelectable.jMonth() + 1;
+    
     if (currentYear === lastYear && currentMonth === lastMonth) return;
+    
     setCurrentMonth((m) => (m === 12 ? 1 : m + 1));
+    if (currentMonth === 12) setCurrentYear(y => y + 1);
   };
 
   const handleDaySelect = (day) => {
-    if (disabled || !isSelectable(day)) return;
-    onDateChange({ year: currentYear, month: currentMonth, day });
+    if (disabled || !isSelectable(day) || (!canSelectMore() && !isSelected(day))) return;
+    
+    const newDate = { year: currentYear, month: currentMonth, day };
+    
+    if (isRange) {
+      // Toggle date selection
+      const isAlreadySelected = selectedDates.some(date => 
+        date.year === currentYear && 
+        date.month === currentMonth && 
+        date.day === day
+      );
+      
+      let newSelectedDates;
+      if (isAlreadySelected) {
+        // Remove date
+        newSelectedDates = selectedDates.filter(date => 
+          !(date.year === currentYear && date.month === currentMonth && date.day === day)
+        );
+      } else {
+        // Add date if we haven't reached the limit
+        if (canSelectMore()) {
+          newSelectedDates = [...selectedDates, newDate];
+        } else {
+          return; // Can't select more
+        }
+      }
+      onDateChange(newSelectedDates);
+    } else {
+      // Single date selection - don't auto-close, just select
+      onDateChange([newDate]);
+    }
+  };
+
+  const clearSelection = () => {
+    onDateChange([]);
+  };
+
+  const handleDone = () => {
+    if (onClose) onClose();
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow-lg p-3 w-64 font-vazir ${disabled ? 'opacity-50' : ''}`}>
+    <div className={`bg-white rounded-lg shadow-lg p-3 w-72 font-vazir ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex justify-between items-center mb-2">
-        <button
-          onClick={prevMonth}
-          disabled={disabled}
-          className="p-1 rounded-full hover:bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <FaChevronRight className="text-[#0B2A5B]" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={prevMonth}
+            disabled={disabled}
+            className="p-1 rounded-full hover:bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaChevronRight className="text-[#0B2A5B]" />
+          </button>
+          <button
+            onClick={nextMonth}
+            disabled={disabled}
+            className="p-1 rounded-full hover:bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaChevronLeft className="text-[#0B2A5B]" />
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-[#0B2A5B] font-semibold text-sm">
             {currentYear}
@@ -123,15 +190,30 @@ const PersianDatePicker = ({ selectedDate, onDateChange, disabled = false }) => 
           </span>
         </div>
         <button
-          onClick={nextMonth}
-          disabled={disabled}
-          className="p-1 rounded-full hover:bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={handleDone}
+          className="p-1 rounded-full hover:bg-gray-100 text-sm text-[#0B2A5B]"
         >
-          <FaChevronLeft className="text-[#0B2A5B]" />
+          {language === 'fa' ? "انجام" : "ترسره کول"}
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-xs">
+      {isRange && (
+        <div className="flex justify-between items-center mb-2 text-xs">
+          <span className="text-[#0B2A5B]">
+            {language === 'fa' ? `انتخاب شده: ${selectedDates.length}/${maxSelectableDays}` : `ټاکل شوي: ${selectedDates.length}/${maxSelectableDays}`}
+          </span>
+          {selectedDates.length > 0 && (
+            <button
+              onClick={clearSelection}
+              className="text-red-500 hover:text-red-700 text-xs"
+            >
+              {language === 'fa' ? "پاک کردن" : "پاک کول"}
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-7 gap-1 text-xs mb-3">
         {persianWeekdays.map((day) => (
           <div key={day} className="text-center text-gray-500 py-1">
             {day.charAt(0)}
@@ -139,18 +221,27 @@ const PersianDatePicker = ({ selectedDate, onDateChange, disabled = false }) => 
         ))}
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
           const selectable = isSelectable(day);
+          const selected = isSelected(day);
+          const canSelect = selectable && (selected || canSelectMore());
+          
           return (
             <button
               key={day}
               onClick={() => handleDaySelect(day)}
-              disabled={disabled || !selectable}
-              className={`p-1 rounded-full text-center ${
-                isSelected(day)
+              disabled={disabled || !canSelect}
+              className={`p-1 rounded-full text-center text-xs ${
+                selected
                   ? "bg-[#F37021] text-white"
                   : selectable && !disabled
                   ? "hover:bg-gray-100 text-[#0B2A5B]"
                   : "text-gray-300 cursor-not-allowed"
+              } ${
+                !canSelect && !selected ? "opacity-50" : ""
               }`}
+              title={!canSelect && !selected ? 
+                (language === 'fa' ? "امکان انتخاب بیشتر وجود ندارد" : "نور انتخابونو امکان نشته") 
+                : ""
+              }
             >
               {day}
             </button>
@@ -158,11 +249,23 @@ const PersianDatePicker = ({ selectedDate, onDateChange, disabled = false }) => 
         })}
       </div>
 
-      {selectedDate && !disabled && (
-        <div className="mt-2 p-2 bg-gray-100 rounded-md text-center text-[#0B2A5B] text-xs">
-          {`${selectedDate.year}/${selectedDate.month}/${selectedDate.day} - ${
-            afghanMonths[selectedDate.month]
-          }`}
+      {selectedDates.length > 0 && !disabled && (
+        <div className="mt-2 p-2 bg-gray-100 rounded-md">
+          <div className="text-[#0B2A5B] text-xs font-semibold mb-1">
+            {language === 'fa' ? "تاریخ‌های انتخاب شده:" : "ټاکل شوې نېټې:"}
+          </div>
+          <div className="text-[#0B2A5B] text-xs max-h-20 overflow-y-auto">
+            {selectedDates.slice(0, 5).map((date, index) => (
+              <div key={index}>
+                {`${date.year}/${date.month}/${date.day} - ${afghanMonths[date.month]}`}
+              </div>
+            ))}
+            {selectedDates.length > 5 && (
+              <div className="text-orange-500">
+                {language === 'fa' ? `و ${selectedDates.length - 5} تاریخ دیگر` : `او ${selectedDates.length - 5} نورې نېټې`}
+              </div>
+            )}
+          </div>
         </div>
       )}
       
@@ -235,6 +338,54 @@ const PriceInput = ({ label, value, onChange, disabled, icon, required }) => {
   );
 };
 
+// Selected Dates Display Component
+const SelectedDatesDisplay = ({ dates, onRemove, isRange }) => {
+  const { language } = useLanguage();
+
+  if (!isRange || dates.length === 0) return null;
+
+  return (
+    <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+      <div className="text-[#0B2A5B] text-sm font-semibold mb-2 flex justify-between items-center">
+        <span>
+          {language === 'fa' ? "تاریخ‌های انتخاب شده:" : "ټاکل شوې نېټې:"}
+        </span>
+        <span className="text-xs text-blue-600">
+          {dates.length} {language === 'fa' ? "تاریخ" : "نېټې"}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+        {dates.map((date, index) => (
+          <div 
+            key={index} 
+            className="flex justify-between items-center bg-white p-2 rounded border border-gray-200"
+          >
+            <span className="text-[#0B2A5B] text-sm">
+              {`${date.year}/${date.month}/${date.day} - ${afghanMonths[date.month]}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => onRemove(index)}
+              className="text-red-500 hover:text-red-700 text-xs p-1 rounded-full hover:bg-red-50 transition-colors"
+              title={language === 'fa' ? "حذف تاریخ" : "نېټه ړنګول"}
+            >
+              <FaTimes />
+            </button>
+          </div>
+        ))}
+      </div>
+      {dates.length > 4 && (
+        <div className="text-orange-500 text-xs mt-2 text-center">
+          {language === 'fa' 
+            ? `+ ${dates.length - 4} تاریخ دیگر` 
+            : `+ ${dates.length - 4} نورې نېټې`
+          }
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Tripa() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -244,22 +395,56 @@ export default function Tripa() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [trips, setTrips] = useState([]);
-  const [selectedJalaliDate, setSelectedJalaliDate] = useState(null);
+  const [selectedJalaliDates, setSelectedJalaliDates] = useState([]);
   const [editingTrip, setEditingTrip] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [busTypes, setBusTypes] = useState([]);
   const [priceVip, setPriceVip] = useState('');
   const [price580, setPrice580] = useState('');
   const [allDays, setAllDays] = useState(false);
+  const [isRange, setIsRange] = useState(false);
   const [formData, setFormData] = useState({});
 
   const token = sessionStorage.getItem("auth_token");
 
-  // Update table columns to show prices correctly
+  // Update table columns to show date ranges
   const columns = [
     { header: t.from, accessor: "from" },
     { header: t.to, accessor: "to" },
-    { header: t.date, accessor: "departure_date_dari" },
+    { 
+      header: language === 'fa' ? "تاریخ‌ها" : "نېټې", 
+      accessor: "departure_dates",
+      render: (row) => {
+        if (row.all_days) {
+          return (
+            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+              {language === 'fa' ? "همه روزها" : "ټولې ورځې"}
+            </span>
+          );
+        }
+        
+        if (row.is_range && row.departure_dates_jalali && row.departure_dates_jalali.length > 0) {
+          const dates = row.departure_dates_jalali.slice(0, 3).map(date => 
+            `${date.year}/${date.month}/${date.day}`
+          ).join('، ');
+          
+          const extraCount = row.departure_dates_jalali.length - 3;
+          
+          return (
+            <div className="text-xs">
+              <div>{dates}</div>
+              {extraCount > 0 && (
+                <div className="text-orange-500 mt-1">
+                  {language === 'fa' ? `+ ${extraCount} تاریخ دیگر` : `+ ${extraCount} نورې نېټې`}
+                </div>
+              )}
+            </div>
+          );
+        }
+        
+        return row.departure_date_dari || '-';
+      }
+    },
     { header: t.departureTime, accessor: "departure_time_ampm" },
     { header: t.departureTerminal, accessor: "departure_terminal" },
     { header: t.arrivalTerminal, accessor: "arrival_terminal" },
@@ -304,6 +489,20 @@ export default function Tripa() {
           row.all_days ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
         }`}>
           {row.all_days ? 
+            (language === 'fa' ? "بله" : "هو") : 
+            (language === 'fa' ? "خیر" : "نه")
+          }
+        </span>
+      ),
+    },
+    {
+      header: language === 'fa' ? "سفر دوره‌ای" : "دوري سفر",
+      accessor: "is_range",
+      render: (row) => (
+        <span className={`px-2 py-1 rounded-full text-xs ${
+          row.is_range ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"
+        }`}>
+          {row.is_range ? 
             (language === 'fa' ? "بله" : "هو") : 
             (language === 'fa' ? "خیر" : "نه")
           }
@@ -367,6 +566,14 @@ export default function Tripa() {
         placeholder: language === 'fa' 
           ? "این سفر برای همه روزها فعال باشد"
           : "دا سفر د ټولو ورځو لپاره فعال وي"
+      },
+      {
+        name: "is_range",
+        label: language === 'fa' ? "سفر دوره‌ای" : "دوري سفر",
+        type: "checkbox",
+        placeholder: language === 'fa' 
+          ? "این سفر در چند تاریخ مختلف فعال باشد"
+          : "دا سفر په څو مختلفو نېټو کې فعال وي"
       }
     ],
     [language, t]
@@ -424,6 +631,8 @@ export default function Tripa() {
       setPriceVip('');
       setPrice580('');
       setAllDays(false);
+      setIsRange(false);
+      setSelectedJalaliDates([]);
       setFormData({});
     }
   }, [isModalOpen]);
@@ -435,11 +644,22 @@ export default function Tripa() {
       const initialBusTypes = Array.isArray(editingTrip.bus_type) ? editingTrip.bus_type : [];
       setBusTypes(initialBusTypes);
       
-      // Then set prices - ensure we have proper values
+      // Then set prices
       setPriceVip(editingTrip.prices?.VIP?.toString() || '');
       setPrice580(editingTrip.prices?.["580"]?.toString() || '');
       
       setAllDays(editingTrip.all_days || false);
+      setIsRange(editingTrip.is_range || false);
+      
+      // Set dates based on trip type
+      if (editingTrip.is_range && editingTrip.departure_dates_jalali) {
+        setSelectedJalaliDates(editingTrip.departure_dates_jalali);
+      } else if (!editingTrip.all_days && editingTrip.departure_date) {
+        const [year, month, day] = editingTrip.departure_date.split("-").map(Number);
+        setSelectedJalaliDates([{ year, month, day }]);
+      } else {
+        setSelectedJalaliDates([]);
+      }
       
       // Set initial form data for the modal
       const initialFormData = {};
@@ -456,7 +676,25 @@ export default function Tripa() {
     
     if (name === 'all_days') {
       setAllDays(value);
+      if (value) {
+        // Clear dates when all_days is enabled
+        setSelectedJalaliDates([]);
+        setIsRange(false);
+      }
     }
+    
+    if (name === 'is_range') {
+      setIsRange(value);
+      if (value) {
+        setAllDays(false);
+      }
+    }
+  };
+
+  // Handle date removal
+  const handleDateRemove = (index) => {
+    const newDates = selectedJalaliDates.filter((_, i) => i !== index);
+    setSelectedJalaliDates(newDates);
   };
 
   // Add trip
@@ -465,35 +703,61 @@ export default function Tripa() {
       language === 'fa' ? "توکن معتبر موجود نیست." : "معتبر ټوکن نشته."
     );
     
-    // Don't require date selection if it's an all_days trip
-    if (!allDays && !selectedJalaliDate)
-      return toast.error(
-        language === 'fa' ? "لطفاً تاریخ سفر را انتخاب کنید." : "مهرباني وکړئ د سفر نېټه وټاکئ."
-      );
+    // Validate based on trip type
+    if (!allDays) {
+      if (isRange) {
+        // Range trip validation - require at least 1 date
+        if (selectedJalaliDates.length === 0) {
+          return toast.error(
+            language === 'fa' ? "لطفاً حداقل یک تاریخ برای سفر دوره‌ای انتخاب کنید." : "مهرباني وکړئ لږ تر لږه یوه نېټه د دوري سفر لپاره وټاکئ."
+          );
+        }
+      } else {
+        // Single date trip validation
+        if (selectedJalaliDates.length === 0) {
+          return toast.error(
+            language === 'fa' ? "لطفاً تاریخ سفر را انتخاب کنید." : "مهرباني وکړئ د سفر نېټه وټاکئ."
+          );
+        }
+      }
+    }
     
-    if (busTypes.length === 0)
+    if (busTypes.length === 0) {
       return toast.error(
         language === 'fa' ? "لطفاً حداقل یک نوع اتوبوس انتخاب کنید." : "مهرباني وکړئ لږ تر لږه یو ډول بس وټاکئ."
       );
+    }
     
     // Validate prices based on selected bus types
-    if (busTypes.includes("VIP") && (!priceVip || isNaN(Number(priceVip)) || Number(priceVip) <= 0))
+    if (busTypes.includes("VIP") && (!priceVip || isNaN(Number(priceVip)) || Number(priceVip) <= 0)) {
       return toast.error(
         language === 'fa' ? "لطفاً قیمت معتبر برای اتوبوس VIP وارد کنید." : "مهرباني وکړئ د VIP بس لپاره معتبره بیه وارد کړئ."
       );
+    }
     
-    if (busTypes.includes("580") && (!price580 || isNaN(Number(price580)) || Number(price580) <= 0))
+    if (busTypes.includes("580") && (!price580 || isNaN(Number(price580)) || Number(price580) <= 0)) {
       return toast.error(
         language === 'fa' ? "لطفاً قیمت معتبر برای اتوبوس ۵۸۰ را وارد کنید." : "مهرباني وکړئ د ۵۸۰ بس لپاره معتبره بیه وارد کړئ."
       );
+    }
 
     try {
       const payload = {
         ...formDataFromModal,
         all_days: allDays,
-        departure_date_jalali: allDays ? null : selectedJalaliDate,
+        is_range: isRange,
         bus_type: busTypes,
       };
+
+      // Add dates based on trip type
+      if (!allDays) {
+        if (isRange) {
+          payload.departure_dates_jalali = selectedJalaliDates;
+        } else {
+          // Single date - take the first selected date
+          payload.departure_date_jalali = selectedJalaliDates[0];
+        }
+      }
 
       // Only include prices for SELECTED bus types
       if (busTypes.includes("VIP")) {
@@ -509,12 +773,13 @@ export default function Tripa() {
       
       setTrips((prev) => [res.data.trip, ...prev]);
       setIsModalOpen(false);
-      setSelectedJalaliDate(null);
+      setSelectedJalaliDates([]);
       setShowDatePicker(false);
       setBusTypes([]);
       setPriceVip('');
       setPrice580('');
       setAllDays(false);
+      setIsRange(false);
       setFormData({});
       toast.success(
         language === 'fa' ? "سفر جدید با موفقیت اضافه شد." : "نوی سفر په بریالیتوب سره اضافه شو."
@@ -530,32 +795,6 @@ export default function Tripa() {
   // Edit trip
   const handleEditTrip = (trip) => {
     setEditingTrip(trip);
-    
-    // Set date only if it's not an all_days trip
-    if (!trip.all_days && trip.departure_date) {
-      const [year, month, day] = trip.departure_date.split("-").map(Number);
-      setSelectedJalaliDate({ year, month, day });
-    } else {
-      setSelectedJalaliDate(null);
-    }
-    
-    // Set bus types FIRST
-    const initialBusTypes = Array.isArray(trip.bus_type) ? trip.bus_type : [];
-    setBusTypes(initialBusTypes);
-    
-    // THEN set prices - ensure we have proper values for all bus types
-    setPriceVip(trip.prices?.VIP?.toString() || '');
-    setPrice580(trip.prices?.["580"]?.toString() || '');
-    
-    setAllDays(trip.all_days || false);
-    
-    // Set initial form data for the modal
-    const initialFormData = {};
-    fields.forEach(field => {
-      initialFormData[field.name] = trip[field.name] || '';
-    });
-    setFormData(initialFormData);
-    
     setIsModalOpen(true);
   };
 
@@ -566,35 +805,61 @@ export default function Tripa() {
     );
     if (!editingTrip) return;
     
-    // Don't require date selection if it's an all_days trip
-    if (!allDays && !selectedJalaliDate)
-      return toast.error(
-        language === 'fa' ? "لطفاً تاریخ سفر را انتخاب کنید." : "مهرباني وکړئ د سفر نېټه وټاکئ."
-      );
+    // Validate based on trip type
+    if (!allDays) {
+      if (isRange) {
+        // Range trip validation - require at least 1 date
+        if (selectedJalaliDates.length === 0) {
+          return toast.error(
+            language === 'fa' ? "لطفاً حداقل یک تاریخ برای سفر دوره‌ای انتخاب کنید." : "مهرباني وکړئ لږ تر لږه یوه نېټه د دوري سفر لپاره وټاکئ."
+          );
+        }
+      } else {
+        // Single date trip validation
+        if (selectedJalaliDates.length === 0) {
+          return toast.error(
+            language === 'fa' ? "لطفاً تاریخ سفر را انتخاب کنید." : "مهرباني وکړئ د سفر نېټه وټاکئ."
+          );
+        }
+      }
+    }
     
-    if (busTypes.length === 0)
+    if (busTypes.length === 0) {
       return toast.error(
         language === 'fa' ? "لطفاً حداقل یک نوع اتوبوس انتخاب کنید." : "مهرباني وکړئ لږ تر لږه یو ډول بس وټاکئ."
       );
+    }
     
     // Validate prices based on selected bus types ONLY
-    if (busTypes.includes("VIP") && (!priceVip || isNaN(Number(priceVip)) || Number(priceVip) <= 0))
+    if (busTypes.includes("VIP") && (!priceVip || isNaN(Number(priceVip)) || Number(priceVip) <= 0)) {
       return toast.error(
         language === 'fa' ? "لطفاً قیمت معتبر برای اتوبوس VIP وارد کنید." : "مهرباني وکړئ د VIP بس لپاره معتبره بیه وارد کړئ."
       );
+    }
     
-    if (busTypes.includes("580") && (!price580 || isNaN(Number(price580)) || Number(price580) <= 0))
+    if (busTypes.includes("580") && (!price580 || isNaN(Number(price580)) || Number(price580) <= 0)) {
       return toast.error(
         language === 'fa' ? "لطفاً قیمت معتبر برای اتوبوس ۵۸۰ را وارد کنید." : "مهرباني وکړئ د ۵۸۰ بس لپاره معتبره بیه وارد کړئ."
       );
+    }
 
     try {
       const payload = {
         ...formDataFromModal,
         all_days: allDays,
-        departure_date_jalali: allDays ? null : selectedJalaliDate,
+        is_range: isRange,
         bus_type: busTypes,
       };
+
+      // Add dates based on trip type
+      if (!allDays) {
+        if (isRange) {
+          payload.departure_dates_jalali = selectedJalaliDates;
+        } else {
+          // Single date - take the first selected date
+          payload.departure_date_jalali = selectedJalaliDates[0];
+        }
+      }
 
       // Only include prices for SELECTED bus types
       if (busTypes.includes("VIP")) {
@@ -615,12 +880,13 @@ export default function Tripa() {
       );
       setIsModalOpen(false);
       setEditingTrip(null);
-      setSelectedJalaliDate(null);
+      setSelectedJalaliDates([]);
       setShowDatePicker(false);
       setBusTypes([]);
       setPriceVip('');
       setPrice580('');
       setAllDays(false);
+      setIsRange(false);
       setFormData({});
       toast.success(
         language === 'fa' ? "سفر با موفقیت ویرایش شد." : "سفر په بریالیتوب سره سم شو."
@@ -680,12 +946,13 @@ export default function Tripa() {
               const [y, m, d] = today.split("/").map(Number);
               setIsModalOpen(true);
               setEditingTrip(null);
-              setSelectedJalaliDate({ year: y, month: m, day: d });
+              setSelectedJalaliDates([{ year: y, month: m, day: d }]);
               setShowDatePicker(false);
               setBusTypes([]);
               setPriceVip('');
               setPrice580('');
               setAllDays(false);
+              setIsRange(false);
               setFormData({});
             }}
             className="bg-[#F37021] text-white px-4 py-2 rounded hover:bg-orange-600 transition"
@@ -707,12 +974,13 @@ export default function Tripa() {
           onClose={() => {
             setIsModalOpen(false);
             setEditingTrip(null);
-            setSelectedJalaliDate(null);
+            setSelectedJalaliDates([]);
             setShowDatePicker(false);
             setBusTypes([]);
             setPriceVip('');
             setPrice580('');
             setAllDays(false);
+            setIsRange(false);
             setFormData({});
           }}
           onSubmit={editingTrip ? handleUpdateTrip : handleAddTrip}
@@ -794,7 +1062,10 @@ export default function Tripa() {
           <div className="sm:col-span-2 relative">
             <label className="block mb-1 font-semibold text-[#0B2A5B] flex items-center gap-2">
               <FaCalendarAlt className="text-orange-500" />
-              {language === 'fa' ? "تاریخ سفر" : "د سفر نېټه"} 
+              {isRange 
+                ? (language === 'fa' ? "تاریخ‌های سفر (چندتایی)" : "د سفر نېټې (څو)")
+                : (language === 'fa' ? "تاریخ سفر" : "د سفر نېټه")
+              }
               {allDays && (language === 'fa' 
                 ? "(غیرفعال برای سفرهای همه روزه)" 
                 : "(د هرې ورځې سفرونو لپاره غیر فعال)"
@@ -806,31 +1077,48 @@ export default function Tripa() {
               }`}
               onClick={() => !allDays && setShowDatePicker(!showDatePicker)}
             >
-              {selectedJalaliDate ? (
-                <span className="text-[#0B2A5B]">
-                  {`${selectedJalaliDate.year}/${selectedJalaliDate.month}/${selectedJalaliDate.day} - ${
-                    afghanMonths[selectedJalaliDate.month]
-                  }`}
+              {selectedJalaliDates.length > 0 ? (
+                <span className="text-[#0B2A5B] text-sm">
+                  {isRange ? (
+                    language === 'fa' 
+                      ? `${selectedJalaliDates.length} تاریخ انتخاب شده`
+                      : `${selectedJalaliDates.length} نېټې ټاکل شوي`
+                  ) : (
+                    `${selectedJalaliDates[0].year}/${selectedJalaliDates[0].month}/${selectedJalaliDates[0].day} - ${
+                      afghanMonths[selectedJalaliDates[0].month]
+                    }`
+                  )}
                 </span>
               ) : (
                 <span className={allDays ? "text-gray-400" : "text-gray-400"}>
                   {allDays ? 
                     (language === 'fa' ? "نیاز به انتخاب تاریخ نیست" : "د نېټې انتخاب ته اړتیا نشته") : 
-                    (language === 'fa' ? "تاریخ سفر را انتخاب کنید" : "د سفر نېټه وټاکئ")
+                    (isRange ? 
+                      (language === 'fa' ? "تاریخ‌های سفر را انتخاب کنید" : "د سفر نېټې وټاکئ") :
+                      (language === 'fa' ? "تاریخ سفر را انتخاب کنید" : "د سفر نېټه وټاکئ")
+                    )
                   }
                 </span>
               )}
-              <FaCalendarAlt className={allDays ? "text-gray-400" : "text-orange-500"} />
+              <FaCalendarPlus className={allDays ? "text-gray-400" : "text-orange-500"} />
             </div>
+            
+            {/* Selected Dates Display - Always show when there are dates */}
+            <SelectedDatesDisplay 
+              dates={selectedJalaliDates}
+              onRemove={handleDateRemove}
+              isRange={isRange}
+            />
+
             {showDatePicker && !allDays && (
               <div className="absolute z-10 bottom-full right-0 mb-2">
                 <PersianDatePicker
-                  selectedDate={selectedJalaliDate}
-                  onDateChange={(date) => {
-                    setSelectedJalaliDate(date);
-                    setShowDatePicker(false);
-                  }}
+                  selectedDates={selectedJalaliDates}
+                  onDateChange={setSelectedJalaliDates}
                   disabled={allDays}
+                  isRange={isRange}
+                  maxSelectableDays={30}
+                  onClose={() => setShowDatePicker(false)}
                 />
               </div>
             )}

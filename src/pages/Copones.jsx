@@ -3,8 +3,65 @@ import CustomTable from "../components/CustomTable";
 import DashboardLayout from "../components/DashboardLayout";
 import axios from "axios";
 import { MdAdd, MdClose } from "react-icons/md";
+import { useLanguage } from '../contexts/LanguageContext.jsX'; // Import language context
 
 const API = import.meta.env.VITE_API_BASE_URL;
+
+// Translation objects
+const translations = {
+  fa: {
+    columns: [
+      { header: "کد کوپن", accessor: "code" },
+      { header: "مقدار تخفیف", accessor: "amount" },
+      { header: "تاریخ انقضا", accessor: "expiry_date" },
+      { header: "حداکثر استفاده", accessor: "usage_limit" },
+    ],
+    titles: {
+      manageCoupons: "مدیریت کوپن‌ها",
+      coupons: "کوپن‌ها",
+      addCoupon: "اضافه کردن کوپن",
+      editCoupon: "ویرایش کوپن",
+      update: "به‌روزرسانی",
+      add: "اضافه کردن"
+    },
+    placeholders: {
+      code: "کد کوپن",
+      amount: "مقدار تخفیف",
+      expiry_date: "تاریخ انقضا",
+      usage_limit: "حداکثر استفاده"
+    },
+    messages: {
+      loading: "در حال بارگذاری...",
+      confirmDelete: (code) => `Are you sure you want to delete coupon "${code}"?`
+    }
+  },
+  ps: {
+    columns: [
+      { header: "د کوپن کوډ", accessor: "code" },
+      { header: "د تخفیف مقدار", accessor: "amount" },
+      { header: "د پای نیټه", accessor: "expiry_date" },
+      { header: "د کارونې حد", accessor: "usage_limit" },
+    ],
+    titles: {
+      manageCoupons: "د کوپنونو مدیریت",
+      coupons: "کوپنونه",
+      addCoupon: "کوپن اضافه کول",
+      editCoupon: "کوپن سمول",
+      update: "اوسمهالول",
+      add: "اضافه کول"
+    },
+    placeholders: {
+      code: "د کوپن کوډ",
+      amount: "د تخفیف مقدار",
+      expiry_date: "د پای نیټه",
+      usage_limit: "د کارونې حد"
+    },
+    messages: {
+      loading: "په بار کېږي...",
+      confirmDelete: (code) => `آیا تاسی ډاډه یاست چې کوپن "${code}" ړنگ کړئ؟`
+    }
+  }
+};
 
 function Copones() {
   const [coupons, setCoupons] = useState([]);
@@ -17,6 +74,9 @@ function Copones() {
     expiry_date: "",
     usage_limit: "",
   });
+
+  const { language } = useLanguage(); // Get current language
+  const t = translations[language]; // Get translations
 
   const token = sessionStorage.getItem("auth_token");
 
@@ -31,8 +91,7 @@ function Copones() {
     setLoading(true);
     try {
       const res = await axios.get(`${API}/api/coupons`, axiosConfig);
-    setCoupons(Array.isArray(res.data.data) ? res.data.data : []);
-
+      setCoupons(Array.isArray(res.data.data) ? res.data.data : []);
     } catch (err) {
       console.error("Error fetching coupons:", err.response || err);
     }
@@ -85,7 +144,7 @@ function Copones() {
   };
 
   const handleDelete = async (coupon) => {
-    if (window.confirm(`Are you sure you want to delete coupon "${coupon.code}"?`)) {
+    if (window.confirm(t.messages.confirmDelete(coupon.code))) {
       try {
         await axios.delete(`${API}/api/coupons/${coupon.id}`, axiosConfig);
         fetchCoupons();
@@ -95,33 +154,26 @@ function Copones() {
     }
   };
 
-  const columns = [
-    { header: "کد کوپن", accessor: "code" },
-    { header: "مقدار تخفیف", accessor: "amount" },
-    { header: "تاریخ انقضا", accessor: "expiry_date" },
-    { header: "حداکثر استفاده", accessor: "usage_limit" },
-  ];
-
   return (
     <DashboardLayout>
       <div className="p-5">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">مدیریت کوپن‌ها</h2>
+          <h2 className="text-xl font-bold">{t.titles.manageCoupons}</h2>
           <button
             onClick={() => openModal()}
             className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700"
           >
-            <MdAdd /> اضافه کردن کوپن
+            <MdAdd /> {t.titles.addCoupon}
           </button>
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-500">در حال بارگذاری...</div>
+          <div className="text-center text-gray-500">{t.messages.loading}</div>
         ) : (
           <CustomTable
-            columns={columns}
+            columns={t.columns}
             data={coupons}
-            title="کوپن‌ها"
+            title={t.titles.coupons}
             onEdit={(row) => openModal(row)}
             onDelete={handleDelete}
           />
@@ -138,7 +190,7 @@ function Copones() {
                 <MdClose size={20} />
               </button>
               <h3 className="text-lg font-bold mb-4">
-                {editingCoupon ? "ویرایش کوپن" : "اضافه کردن کوپن"}
+                {editingCoupon ? t.titles.editCoupon : t.titles.addCoupon}
               </h3>
               <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                 <input
@@ -146,7 +198,7 @@ function Copones() {
                   name="code"
                   value={formData.code}
                   onChange={handleChange}
-                  placeholder="کد کوپن"
+                  placeholder={t.placeholders.code}
                   className="border px-3 py-2 rounded-lg"
                   required
                 />
@@ -155,7 +207,7 @@ function Copones() {
                   name="amount"
                   value={formData.amount}
                   onChange={handleChange}
-                  placeholder="مقدار تخفیف"
+                  placeholder={t.placeholders.amount}
                   className="border px-3 py-2 rounded-lg"
                   required
                 />
@@ -164,7 +216,7 @@ function Copones() {
                   name="expiry_date"
                   value={formData.expiry_date}
                   onChange={handleChange}
-                  placeholder="تاریخ انقضا"
+                  placeholder={t.placeholders.expiry_date}
                   className="border px-3 py-2 rounded-lg"
                   required
                 />
@@ -173,7 +225,7 @@ function Copones() {
                   name="usage_limit"
                   value={formData.usage_limit}
                   onChange={handleChange}
-                  placeholder="حداکثر استفاده"
+                  placeholder={t.placeholders.usage_limit}
                   className="border px-3 py-2 rounded-lg"
                   required
                 />
@@ -181,7 +233,7 @@ function Copones() {
                   type="submit"
                   className="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
                 >
-                  {editingCoupon ? "به‌روزرسانی" : "اضافه کردن"}
+                  {editingCoupon ? t.titles.update : t.titles.add}
                 </button>
               </form>
             </div>

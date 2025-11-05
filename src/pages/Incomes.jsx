@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import CustomTable from '../components/CustomTable'
 import DashboardLayout from '../components/DashboardLayout'
+import { useLanguage } from '../contexts/LanguageContext.jsX';// Import language context
 
 // Route configuration for fees
 const ROUTE_FEES = {
@@ -11,6 +12,260 @@ const ROUTE_FEES = {
   "100_AFN_ROUTES": {
     provinces: ["herat", "هرات", "nimroz", "نیمروز", "farah", "فراه", "helmand", "هلمند"],
     fee: 100
+  }
+};
+
+// Translation objects
+const translations = {
+  fa: {
+    tableColumns: [
+      {
+        header: "شماره بلیت",
+        accessor: "ticket_number"
+      },
+      {
+        header: "مسافر",
+        accessor: "name",
+        render: (row) => `${row.name} ${row.last_name}`
+      },
+      {
+        header: "تلفون",
+        accessor: "phone"
+      },
+      {
+        header: "مسیر",
+        accessor: "route",
+        render: (row) => `${row._trip?.from || 'نامشخص'} → ${row._trip?.to || 'نامشخص'}`
+      },
+      {
+        header: "تعداد صندلی",
+        accessor: "seats",
+        render: (row) => row.seat_numbers?.length || 1
+      },
+      {
+        header: "قیمت",
+        accessor: "price",
+        render: (row) => {
+          const seatCount = row.seat_numbers?.length || 1;
+          const price = row._trip?.prices?.[row.bus_type] || 0;
+          const baseAmount = price * seatCount;
+          
+          // Apply HessabPay discount for display
+          const paymentMethod = (row.payment_method || "").toLowerCase().trim();
+          const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
+          
+          if (isHessabPay) {
+            const finalAmount = Math.max(0, baseAmount - 20);
+            return (
+              <div className="text-left">
+                <div className="text-gray-600">{finalAmount.toLocaleString()} AFN</div>
+                <div className="text-xs text-red-500 line-through">{baseAmount.toLocaleString()} AFN</div>
+                <div className="text-xs text-green-600">تخفیف HessabPay: 20 AFN</div>
+              </div>
+            );
+          }
+          
+          return `${baseAmount.toLocaleString()} AFN`;
+        }
+      },
+      {
+        header: "وضعیت پرداخت",
+        accessor: "payment_status",
+        render: (row) => (
+          <span className={`px-2 py-1 rounded-full text-xs ${
+            row.payment_status === 'paid' 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-red-100 text-red-800'
+          }`}>
+            {row.payment_status === 'paid' ? 'پرداخت شده' : 'پرداخت نشده'}
+          </span>
+        )
+      },
+      {
+        header: "روش پرداخت",
+        accessor: "payment_method",
+        render: (row) => {
+          const paymentMethod = (row.payment_method || "").toLowerCase().trim();
+          const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
+          
+          if (isHessabPay) {
+            return (
+              <span className="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                💳 HessabPay
+              </span>
+            );
+          }
+          return row.payment_method || 'نامشخص';
+        }
+      },
+      {
+        header: "منبع",
+        accessor: "from_website",
+        render: (row) => {
+          if (row.from_website === 'http://localhost:5174') {
+            return <span className="text-blue-600 font-semibold">از قاصد</span>;
+          }
+          return row.from_website || 'داخلی';
+        }
+      }
+    ],
+    cards: {
+      grossIncome: "درآمد ناخالص",
+      qasedCommission: "کمیسیون قاصد",
+      hessabPayDiscount: "تخفیف HessabPay",
+      tax: "مالیات (۲٪)",
+      netIncome: "عواید خالص",
+      beforeDeductions: "قبل از هرگونه کسر",
+      afterAllDeductions: "بعد از کسر همه هزینه‌ها"
+    },
+    banners: {
+      hessabPayInfo: "💳 اطلاعات پرداخت‌های HessabPay",
+      hessabPayTickets: "تعداد بلیت های HessabPay:",
+      totalDiscount: "مجموع تخفیف اعمال شده:",
+      averageDiscount: "میانگین تخفیف هر بلیط:",
+      hessabPayNote: "* برای پرداخت های HessabPay مبلغ 20 افغانی از هر بلیط کسر شده است"
+    },
+    summary: {
+      title: "خلاصه محاسبات",
+      grossIncome: "درآمد ناخالص:",
+      hessabPayDeduction: "کسر تخفیف HessabPay:",
+      qasedCommissionDeduction: "کسر کمیسیون قاصد:",
+      incomeBeforeTax: "درآمد قبل از مالیات:",
+      taxDeduction: "کسر مالیات (۲٪):",
+      finalNetIncome: "عواید خالص نهایی:",
+      totalTickets: "تعداد کل بلیت‌ها:",
+      hessabPayTickets: "بلیت‌های HessabPay:",
+      qasedTickets: "بلیت‌های از قاصد:",
+      hessabPayPercentage: "درصد HessabPay:",
+      qasedPercentage: "درصد قاصد:"
+    },
+    tableTitle: "لیست بلیت‌ها و عواید",
+    loading: "در حال بارگذاری..."
+  },
+  ps: {
+    tableColumns: [
+      {
+        header: "د ټکټ نمبر",
+        accessor: "ticket_number"
+      },
+      {
+        header: "مسافر",
+        accessor: "name",
+        render: (row) => `${row.name} ${row.last_name}`
+      },
+      {
+        header: "تلیفون",
+        accessor: "phone"
+      },
+      {
+        header: "لار",
+        accessor: "route",
+        render: (row) => `${row._trip?.from || 'ناجوت'} → ${row._trip?.to || 'ناجوت'}`
+      },
+      {
+        header: "د چوکیو شمیر",
+        accessor: "seats",
+        render: (row) => row.seat_numbers?.length || 1
+      },
+      {
+        header: "قیمت",
+        accessor: "price",
+        render: (row) => {
+          const seatCount = row.seat_numbers?.length || 1;
+          const price = row._trip?.prices?.[row.bus_type] || 0;
+          const baseAmount = price * seatCount;
+          
+          // Apply HessabPay discount for display
+          const paymentMethod = (row.payment_method || "").toLowerCase().trim();
+          const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
+          
+          if (isHessabPay) {
+            const finalAmount = Math.max(0, baseAmount - 20);
+            return (
+              <div className="text-left">
+                <div className="text-gray-600">{finalAmount.toLocaleString()} AFN</div>
+                <div className="text-xs text-red-500 line-through">{baseAmount.toLocaleString()} AFN</div>
+                <div className="text-xs text-green-600">د HessabPay تخفیف: 20 AFN</div>
+              </div>
+            );
+          }
+          
+          return `${baseAmount.toLocaleString()} AFN`;
+        }
+      },
+      {
+        header: "د پرداخت حالت",
+        accessor: "payment_status",
+        render: (row) => (
+          <span className={`px-2 py-1 rounded-full text-xs ${
+            row.payment_status === 'paid' 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-red-100 text-red-800'
+          }`}>
+            {row.payment_status === 'paid' ? 'ورکړ شوی' : 'ورکړ نه شوی'}
+          </span>
+        )
+      },
+      {
+        header: "د پرداخت طریقه",
+        accessor: "payment_method",
+        render: (row) => {
+          const paymentMethod = (row.payment_method || "").toLowerCase().trim();
+          const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
+          
+          if (isHessabPay) {
+            return (
+              <span className="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                💳 HessabPay
+              </span>
+            );
+          }
+          return row.payment_method || 'ناجوت';
+        }
+      },
+      {
+        header: "سرچینه",
+        accessor: "from_website",
+        render: (row) => {
+          if (row.from_website === 'http://localhost:5174') {
+            return <span className="text-blue-600 font-semibold">له قاصد څخه</span>;
+          }
+          return row.from_website || 'کورنی';
+        }
+      }
+    ],
+    cards: {
+      grossIncome: "ناخالص عواید",
+      qasedCommission: "د قاصد کمیسیون",
+      hessabPayDiscount: "د HessabPay تخفیف",
+      tax: "مالیه (۲٪)",
+      netIncome: "صافي عواید",
+      beforeDeductions: "د هر ډول تخفیف څخه مخکې",
+      afterAllDeductions: "د ټولو لګښتونو څخه وروسته"
+    },
+    banners: {
+      hessabPayInfo: "💳 د HessabPay پرداختونو معلومات",
+      hessabPayTickets: "د HessabPay د ټکټونو شمیر:",
+      totalDiscount: "د پلي شوي تخفیف مجموعه:",
+      averageDiscount: "د هر ټکټ اوسط تخفیف:",
+      hessabPayNote: "* د HessabPay پرداختونو لپاره د هر ټکټ څخه 20 افغانی تخفیف شوی"
+    },
+    summary: {
+      title: "د محاسبو لنډیز",
+      grossIncome: "ناخالص عواید:",
+      hessabPayDeduction: "د HessabPay تخفیف کمول:",
+      qasedCommissionDeduction: "د قاصد کمیسیون کمول:",
+      incomeBeforeTax: "د مالیې څخه مخکې عواید:",
+      taxDeduction: "د مالیې کمول (۲٪):",
+      finalNetIncome: "د پایلي صافي عواید:",
+      totalTickets: "د ټولو ټکټونو شمیر:",
+      hessabPayTickets: "د HessabPay ټکټونه:",
+      qasedTickets: "د قاصد څخه ټکټونه:",
+      hessabPayPercentage: "د HessabPay سلنه:",
+      qasedPercentage: "د قاصد سلنه:"
+    },
+    tableTitle: "د ټکټونو او عوایدو لیست",
+    loading: "په بار کېږي..."
   }
 };
 
@@ -35,6 +290,9 @@ function Incomes() {
     incomeAfterHessabPay: 0,
     incomeAfterCommission: 0
   });
+
+  const { language } = useLanguage(); // Get current language
+  const t = translations[language]; // Get translations
 
   useEffect(() => {
     fetchTripsWithTickets();
@@ -183,103 +441,11 @@ function Incomes() {
     })) || []
   );
 
-  const tableColumns = [
-    {
-      header: "شماره بلیت",
-      accessor: "ticket_number"
-    },
-    {
-      header: "مسافر",
-      accessor: "name",
-      render: (row) => `${row.name} ${row.last_name}`
-    },
-    {
-      header: "تلفون",
-      accessor: "phone"
-    },
-    {
-      header: "مسیر",
-      accessor: "route",
-      render: (row) => `${row._trip?.from || 'نامشخص'} → ${row._trip?.to || 'نامشخص'}`
-    },
-    {
-      header: "تعداد صندلی",
-      accessor: "seats",
-      render: (row) => row.seat_numbers?.length || 1
-    },
-    {
-      header: "قیمت",
-      accessor: "price",
-      render: (row) => {
-        const seatCount = row.seat_numbers?.length || 1;
-        const price = row._trip?.prices?.[row.bus_type] || 0;
-        const baseAmount = price * seatCount;
-        
-        // Apply HessabPay discount for display
-        const paymentMethod = (row.payment_method || "").toLowerCase().trim();
-        const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
-        
-        if (isHessabPay) {
-          const finalAmount = Math.max(0, baseAmount - 20);
-          return (
-            <div className="text-left">
-              <div className="text-gray-600">{finalAmount.toLocaleString()} AFN</div>
-              <div className="text-xs text-red-500 line-through">{baseAmount.toLocaleString()} AFN</div>
-              <div className="text-xs text-green-600">تخفیف HessabPay: 20 AFN</div>
-            </div>
-          );
-        }
-        
-        return `${baseAmount.toLocaleString()} AFN`;
-      }
-    },
-    {
-      header: "وضعیت پرداخت",
-      accessor: "payment_status",
-      render: (row) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          row.payment_status === 'paid' 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        }`}>
-          {row.payment_status === 'paid' ? 'پرداخت شده' : 'پرداخت نشده'}
-        </span>
-      )
-    },
-    {
-      header: "روش پرداخت",
-      accessor: "payment_method",
-      render: (row) => {
-        const paymentMethod = (row.payment_method || "").toLowerCase().trim();
-        const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
-        
-        if (isHessabPay) {
-          return (
-            <span className="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-              💳 HessabPay
-            </span>
-          );
-        }
-        return row.payment_method || 'نامشخص';
-      }
-    },
-    {
-      header: "منبع",
-      accessor: "from_website",
-      render: (row) => {
-        if (row.from_website === 'http://localhost:5174') {
-          return <span className="text-blue-600 font-semibold">از قاصد</span>;
-        }
-        return row.from_website || 'داخلی';
-      }
-    }
-  ];
-
   if (loading) {
     return (
       <DashboardLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg">در حال بارگذاری...</div>
+          <div className="text-lg">{t.loading}</div>
         </div>
       </DashboardLayout>
     );
@@ -294,11 +460,11 @@ function Incomes() {
           <div className="bg-white rounded-2xl shadow-md p-6 border-r-4 border-r-blue-500">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-gray-500 text-sm mb-2">درآمد ناخالص</h3>
+                <h3 className="text-gray-500 text-sm mb-2">{t.cards.grossIncome}</h3>
                 <p className="text-2xl font-bold text-gray-800">
                   {calculationBreakdown.grossIncome.toLocaleString()} AFN
                 </p>
-                <p className="text-xs text-gray-400 mt-1">قبل از هرگونه کسر</p>
+                <p className="text-xs text-gray-400 mt-1">{t.cards.beforeDeductions}</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-lg">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,7 +478,7 @@ function Incomes() {
           <div className="bg-white rounded-2xl shadow-md p-6 border-r-4 border-r-purple-500">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-gray-500 text-sm mb-2">کمیسیون قاصد</h3>
+                <h3 className="text-gray-500 text-sm mb-2">{t.cards.qasedCommission}</h3>
                 <p className="text-2xl font-bold text-purple-600">
                   {qasedCommission.totalCommission.toLocaleString()} AFN
                 </p>
@@ -334,7 +500,7 @@ function Incomes() {
             <div className="bg-white rounded-2xl shadow-md p-6 border-r-4 border-r-pink-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-gray-500 text-sm mb-2">تخفیف HessabPay</h3>
+                  <h3 className="text-gray-500 text-sm mb-2">{t.cards.hessabPayDiscount}</h3>
                   <p className="text-2xl font-bold text-pink-600">
                     {hessabPayStats.totalDiscount.toLocaleString()} AFN
                   </p>
@@ -356,7 +522,7 @@ function Incomes() {
           <div className="bg-white rounded-2xl shadow-md p-6 border-r-4 border-r-orange-500">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-gray-500 text-sm mb-2">مالیات (۲٪)</h3>
+                <h3 className="text-gray-500 text-sm mb-2">{t.cards.tax}</h3>
                 <p className="text-2xl font-bold text-gray-800">
                   {taxAmount.toLocaleString()} AFN
                 </p>
@@ -373,11 +539,11 @@ function Incomes() {
           <div className="bg-white rounded-2xl shadow-md p-6 border-r-4 border-r-green-500">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-gray-500 text-sm mb-2">عواید خالص</h3>
+                <h3 className="text-gray-500 text-sm mb-2">{t.cards.netIncome}</h3>
                 <p className="text-2xl font-bold text-gray-800">
                   {netIncome.toLocaleString()} AFN
                 </p>
-                <p className="text-xs text-gray-400 mt-1">بعد از کسر همه هزینه‌ها</p>
+                <p className="text-xs text-gray-400 mt-1">{t.cards.afterAllDeductions}</p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -394,19 +560,19 @@ function Incomes() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-pink-800 font-bold text-lg mb-2 flex items-center">
-                  💳 اطلاعات پرداخت‌های HessabPay
+                  {t.banners.hessabPayInfo}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="text-pink-700">
-                    <span className="font-medium">تعداد بلیت های HessabPay: </span>
+                    <span className="font-medium">{t.banners.hessabPayTickets} </span>
                     <span className="font-bold">{hessabPayStats.ticketCount} بلیط</span>
                   </div>
                   <div className="text-pink-700">
-                    <span className="font-medium">مجموع تخفیف اعمال شده: </span>
+                    <span className="font-medium">{t.banners.totalDiscount} </span>
                     <span className="font-bold">{hessabPayStats.totalDiscount.toLocaleString()} افغانی</span>
                   </div>
                   <div className="text-pink-700">
-                    <span className="font-medium">میانگین تخفیف هر بلیط: </span>
+                    <span className="font-medium">{t.banners.averageDiscount} </span>
                     <span className="font-bold">20 افغانی</span>
                   </div>
                 </div>
@@ -418,16 +584,16 @@ function Incomes() {
               </div>
             </div>
             <p className="text-pink-600 text-xs mt-2">
-              * برای پرداخت های HessabPay مبلغ 20 افغانی از هر بلیط کسر شده است
+              {t.banners.hessabPayNote}
             </p>
           </div>
         )}
 
         {/* Tickets Table */}
         <CustomTable
-          columns={tableColumns}
+          columns={t.tableColumns}
           data={tableData}
-          title="لیست بلیت‌ها و عواید"
+          title={t.tableTitle}
           onView={(row) => console.log('View:', row)}
           onEdit={(row) => console.log('Edit:', row)}
           onDelete={(row) => console.log('Delete:', row)}
@@ -435,63 +601,63 @@ function Incomes() {
 
         {/* Summary Section */}
         <div className="mt-6 bg-gray-50 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">خلاصه محاسبات</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">{t.summary.title}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">درآمد ناخالص:</span>
+                <span className="text-gray-600">{t.summary.grossIncome}</span>
                 <span className="font-medium">{calculationBreakdown.grossIncome.toLocaleString()} AFN</span>
               </div>
               {hessabPayStats.ticketCount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">کسر تخفیف HessabPay:</span>
+                  <span className="text-gray-600">{t.summary.hessabPayDeduction}</span>
                   <span className="font-medium text-red-600">- {hessabPayStats.totalDiscount.toLocaleString()} AFN</span>
                 </div>
               )}
               {qasedCommission.ticketCount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">کسر کمیسیون قاصد:</span>
+                  <span className="text-gray-600">{t.summary.qasedCommissionDeduction}</span>
                   <span className="font-medium text-red-600">- {qasedCommission.totalCommission.toLocaleString()} AFN</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-gray-600">درآمد قبل از مالیات:</span>
+                <span className="text-gray-600">{t.summary.incomeBeforeTax}</span>
                 <span className="font-medium">{calculationBreakdown.incomeAfterCommission.toLocaleString()} AFN</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">کسر مالیات (۲٪):</span>
+                <span className="text-gray-600">{t.summary.taxDeduction}</span>
                 <span className="font-medium text-red-600">- {taxAmount.toLocaleString()} AFN</span>
               </div>
               <div className="border-t pt-2 flex justify-between font-bold">
-                <span className="text-gray-800">عواید خالص نهایی:</span>
+                <span className="text-gray-800">{t.summary.finalNetIncome}</span>
                 <span className="text-green-600">{netIncome.toLocaleString()} AFN</span>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">تعداد کل بلیت‌ها:</span>
+                <span className="text-gray-600">{t.summary.totalTickets}</span>
                 <span className="font-medium">{tableData.filter(ticket => ticket.payment_status === 'paid').length} بلیط</span>
               </div>
               {hessabPayStats.ticketCount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">بلیت‌های HessabPay:</span>
+                  <span className="text-gray-600">{t.summary.hessabPayTickets}</span>
                   <span className="font-medium text-purple-600">{hessabPayStats.ticketCount} بلیط</span>
                 </div>
               )}
               {qasedCommission.ticketCount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">بلیت‌های از قاصد:</span>
+                  <span className="text-gray-600">{t.summary.qasedTickets}</span>
                   <span className="font-medium text-blue-600">{qasedCommission.ticketCount} بلیط</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-gray-600">درصد HessabPay:</span>
+                <span className="text-gray-600">{t.summary.hessabPayPercentage}</span>
                 <span className="font-medium">
                   {((hessabPayStats.ticketCount / tableData.filter(ticket => ticket.payment_status === 'paid').length) * 100).toFixed(1)}%
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">درصد قاصد:</span>
+                <span className="text-gray-600">{t.summary.qasedPercentage}</span>
                 <span className="font-medium">
                   {((qasedCommission.ticketCount / tableData.filter(ticket => ticket.payment_status === 'paid').length) * 100).toFixed(1)}%
                 </span>
