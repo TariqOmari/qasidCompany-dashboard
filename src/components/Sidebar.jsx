@@ -7,10 +7,14 @@ import {
   RiLogoutBoxRLine,
   RiMoneyCnyBoxFill,
   RiMoneyDollarBoxFill,
+  RiDeviceRecoverFill,
+  RiDiscountPercentFill,
+  RiDriveFill,
 } from "react-icons/ri";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext.jsX";
 import { translations } from "../pages/locales/translations";
+import { FaBookmark, FaPassport, FaUser } from "react-icons/fa";
 
 const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
   const [company, setCompany] = useState(null);
@@ -35,14 +39,17 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
   };
 
   const links = [
-    { label: t.dashboard, icon: <RiDashboardLine />, to: "/" },
+    
     { label: t.buses, icon: <RiBusFill />, to: "/bus" },
     { label: t.drivers, icon: <RiDriveLine />, to: "/driver" },
     { label: t.trips, icon: <RiAirplayFill />, to: "/trips" },
-    { label: t.chalans, icon: <RiAirplayFill />, to: "/chalans" },
+    { label: t.chalans, icon: <RiDriveFill />, to: "/chalans" },
     { label: t.incomes, icon: <RiMoneyDollarBoxFill />, to: "/incomes" },
-    { label: t.copones, icon: <RiMoneyDollarBoxFill />, to: "/copones" },
-
+    { label: t.copones, icon: <RiDiscountPercentFill />, to: "/copones" },
+     { label: t.cleaners, icon: <FaUser />, to: "/cleaners" },
+     { label: t.busbooking, icon: <FaBookmark />, to: "/busbooking" },
+   { label: t.tickethistory, icon: <FaPassport />, to: "/ticketshistory" },
+    
   ];
 
   return (

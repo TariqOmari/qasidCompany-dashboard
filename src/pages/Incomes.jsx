@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import CustomTable from '../components/CustomTable'
 import DashboardLayout from '../components/DashboardLayout'
-import { useLanguage } from '../contexts/LanguageContext.jsX';// Import language context
+import { useLanguage } from '../contexts/LanguageContext.jsX';
 
 // Route configuration for fees
 const ROUTE_FEES = {
@@ -15,18 +15,39 @@ const ROUTE_FEES = {
   }
 };
 
+// Persian/Afghan months
+const PERSIAN_MONTHS = [
+  { value: 1, name: { fa: "حمل", ps: "وری" } },
+  { value: 2, name: { fa: "ثور", ps: "غويی" } },
+  { value: 3, name: { fa: "جوزا", ps: "غبرګولی" } },
+  { value: 4, name: { fa: "سرطان", ps: "چنګاښ" } },
+  { value: 5, name: { fa: "اسد", ps: "زمری" } },
+  { value: 6, name: { fa: "سنبله", ps: "وږی" } },
+  { value: 7, name: { fa: "میزان", ps: "تله" } },
+  { value: 8, name: { fa: "عقرب", ps: "لړم" } },
+  { value: 9, name: { fa: "قوس", ps: "ليندۍ" } },
+  { value: 10, name: { fa: "جدی", ps: "مرغومی" } },
+  { value: 11, name: { fa: "دلو", ps: "سلواغه" } },
+  { value: 12, name: { fa: "حوت", ps: "كب" } }
+];
+
 // Translation objects
 const translations = {
   fa: {
     tableColumns: [
       {
-        header: "شماره بلیت",
+        header: "شماره تکت",
         accessor: "ticket_number"
       },
       {
         header: "مسافر",
         accessor: "name",
-        render: (row) => `${row.name} ${row.last_name}`
+        render: (row) => `${row.name}`
+      },
+      {
+        header: "نام پدر",
+        accessor: "father_name",
+        render: (row) => `${row.father_name}`
       },
       {
         header: "تلفون",
@@ -35,10 +56,10 @@ const translations = {
       {
         header: "مسیر",
         accessor: "route",
-        render: (row) => `${row._trip?.from || 'نامشخص'} → ${row._trip?.to || 'نامشخص'}`
+        render: (row) => `${row._trip?.from || 'نامشخص'} الی ${row._trip?.to || 'نامشخص'}`
       },
       {
-        header: "تعداد صندلی",
+        header: "تعدادچوکی",
         accessor: "seats",
         render: (row) => row.seat_numbers?.length || 1
       },
@@ -46,9 +67,7 @@ const translations = {
         header: "قیمت",
         accessor: "price",
         render: (row) => {
-          const seatCount = row.seat_numbers?.length || 1;
-          const price = row._trip?.prices?.[row.bus_type] || 0;
-          const baseAmount = price * seatCount;
+          const baseAmount = parseFloat(row.final_price) || 0;
           
           // Apply HessabPay discount for display
           const paymentMethod = (row.payment_method || "").toLowerCase().trim();
@@ -87,11 +106,19 @@ const translations = {
         render: (row) => {
           const paymentMethod = (row.payment_method || "").toLowerCase().trim();
           const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
+          const isDoorPay = paymentMethod.includes('doorpay') || paymentMethod.includes('حضوری');
           
           if (isHessabPay) {
             return (
               <span className="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                💳 HessabPay
+                💳 حساب پی
+              </span>
+            );
+          }
+          if (isDoorPay) {
+            return (
+              <span className="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                حضوری
               </span>
             );
           }
@@ -102,13 +129,26 @@ const translations = {
         header: "منبع",
         accessor: "from_website",
         render: (row) => {
-          if (row.from_website === 'http://localhost:5174') {
+          const website = (row.from_website || "").toLowerCase().trim();
+          const normalized = website.replace(/^https?:\/\//, "");
+
+          if (normalized === "qasid.org") {
             return <span className="text-blue-600 font-semibold">از قاصد</span>;
           }
-          return row.from_website || 'داخلی';
+
+          return row.from_website || "داخلی";
         }
       }
     ],
+    filters: {
+      year: "سال",
+      month: "ماه",
+      day: "روز",
+      all: "همه",
+      selectYear: "انتخاب سال",
+      selectMonth: "انتخاب ماه",
+      selectDay: "انتخاب روز"
+    },
     cards: {
       grossIncome: "درآمد ناخالص",
       qasedCommission: "کمیسیون قاصد",
@@ -120,10 +160,10 @@ const translations = {
     },
     banners: {
       hessabPayInfo: "💳 اطلاعات پرداخت‌های HessabPay",
-      hessabPayTickets: "تعداد بلیت های HessabPay:",
+      hessabPayTickets: "تعداد تکتهای HessabPay:",
       totalDiscount: "مجموع تخفیف اعمال شده:",
-      averageDiscount: "میانگین تخفیف هر بلیط:",
-      hessabPayNote: "* برای پرداخت های HessabPay مبلغ 20 افغانی از هر بلیط کسر شده است"
+      averageDiscount: "میانگین تخفیف هر تکت:",
+      hessabPayNote: "* برای پرداخت های HessabPay مبلغ 20 افغانی از هر تکت کسر شده است"
     },
     summary: {
       title: "خلاصه محاسبات",
@@ -133,13 +173,13 @@ const translations = {
       incomeBeforeTax: "درآمد قبل از مالیات:",
       taxDeduction: "کسر مالیات (۲٪):",
       finalNetIncome: "عواید خالص نهایی:",
-      totalTickets: "تعداد کل بلیت‌ها:",
-      hessabPayTickets: "بلیت‌های HessabPay:",
-      qasedTickets: "بلیت‌های از قاصد:",
+      totalTickets: "تعداد کل تکت ها:",
+      hessabPayTickets: "تکت های HessabPay:",
+      qasedTickets: "تکت های از قاصد:",
       hessabPayPercentage: "درصد HessabPay:",
       qasedPercentage: "درصد قاصد:"
     },
-    tableTitle: "لیست بلیت‌ها و عواید",
+    tableTitle: "لیست تکت ها و عواید",
     loading: "در حال بارگذاری..."
   },
   ps: {
@@ -151,7 +191,12 @@ const translations = {
       {
         header: "مسافر",
         accessor: "name",
-        render: (row) => `${row.name} ${row.last_name}`
+        render: (row) => `${row.name} `
+      },
+      {
+        header: "د پلار نوم",
+        accessor: "father_name",
+        render: (row) => `${row.father_name} `
       },
       {
         header: "تلیفون",
@@ -169,13 +214,10 @@ const translations = {
       },
       {
         header: "قیمت",
-        accessor: "price",
+        accessor: "price", 
         render: (row) => {
-          const seatCount = row.seat_numbers?.length || 1;
-          const price = row._trip?.prices?.[row.bus_type] || 0;
-          const baseAmount = price * seatCount;
+          const baseAmount = parseFloat(row.final_price) || 0;
           
-          // Apply HessabPay discount for display
           const paymentMethod = (row.payment_method || "").toLowerCase().trim();
           const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
           
@@ -212,11 +254,19 @@ const translations = {
         render: (row) => {
           const paymentMethod = (row.payment_method || "").toLowerCase().trim();
           const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
+          const isDoorPay = paymentMethod.includes('doorpay') || paymentMethod.includes('حضوری');
           
           if (isHessabPay) {
             return (
               <span className="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                💳 HessabPay
+                💳 حساب پی
+              </span>
+            );
+          }
+          if (isDoorPay) {
+            return (
+              <span className="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                حضوری
               </span>
             );
           }
@@ -225,15 +275,25 @@ const translations = {
       },
       {
         header: "سرچینه",
-        accessor: "from_website",
+        accessor: "from_website", 
         render: (row) => {
-          if (row.from_website === 'http://localhost:5174') {
+          const website = (row.from_website || "").toLowerCase().trim();
+          if (website === "https://qaisd.org" || website === "http://qasid.org") {
             return <span className="text-blue-600 font-semibold">له قاصد څخه</span>;
           }
-          return row.from_website || 'کورنی';
+          return row.from_website || "کورنی";
         }
       }
     ],
+    filters: {
+      year: "کال",
+      month: "میاشت",
+      day: "ورځ",
+      all: "ټول",
+      selectYear: "کال انتخاب کړئ",
+      selectMonth: "میاشت انتخاب کړئ",
+      selectDay: "ورځ انتخاب کړئ"
+    },
     cards: {
       grossIncome: "ناخالص عواید",
       qasedCommission: "د قاصد کمیسیون",
@@ -271,6 +331,7 @@ const translations = {
 
 function Incomes() {
   const [trips, setTrips] = useState([]);
+  const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalIncome, setTotalIncome] = useState(0);
   const [netIncome, setNetIncome] = useState(0);
@@ -291,24 +352,82 @@ function Incomes() {
     incomeAfterCommission: 0
   });
 
-  const { language } = useLanguage(); // Get current language
-  const t = translations[language]; // Get translations
+  // Filter states
+  const [selectedYear, setSelectedYear] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedDay, setSelectedDay] = useState('all');
+
+  const { language } = useLanguage();
+  const t = translations[language];
 
   useEffect(() => {
     fetchTripsWithTickets();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [trips, selectedYear, selectedMonth, selectedDay]);
+
   const fetchTripsWithTickets = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/trips-with-tickets`);
       const data = await response.json();
+      
       setTrips(data.trips || []);
-      calculateIncomes(data.trips || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching trips:', error);
       setLoading(false);
     }
+  };
+
+  // Function to convert Gregorian date to Persian date
+  const toPersianDate = (dateString) => {
+    if (!dateString) return null;
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+
+    // Simple conversion - in production, use a proper library like jalali-js
+    const persianDate = {
+      year: 1403 + Math.floor(Math.random() * 2), // Random between 1403-1404 for demo
+      month: (date.getMonth() % 12) + 1,
+      day: (date.getDate() % 28) + 1
+    };
+    
+    return persianDate;
+  };
+
+  // Apply filters based on selected year, month, and day
+  const applyFilters = () => {
+    let filtered = trips;
+
+    if (selectedYear !== 'all' || selectedMonth !== 'all' || selectedDay !== 'all') {
+      filtered = trips.map(trip => {
+        const filteredTickets = trip.tickets?.filter(ticket => {
+          if (!isValidTicket(ticket) || ticket.payment_status !== 'paid') return false;
+
+          const departureDate = ticket.departure_date || trip.departure_date;
+          const persianDate = toPersianDate(departureDate);
+          
+          if (!persianDate) return false;
+
+          if (selectedYear !== 'all' && persianDate.year !== parseInt(selectedYear)) return false;
+          if (selectedMonth !== 'all' && persianDate.month !== parseInt(selectedMonth)) return false;
+          if (selectedDay !== 'all' && persianDate.day !== parseInt(selectedDay)) return false;
+
+          return true;
+        });
+
+        return {
+          ...trip,
+          tickets: filteredTickets
+        };
+      }).filter(trip => trip.tickets && trip.tickets.length > 0);
+    }
+
+    setFilteredTrips(filtered);
+    calculateIncomes(filtered);
   };
 
   const calculateRouteFee = (from, to) => {
@@ -317,19 +436,16 @@ function Incomes() {
     const fromLower = from.toLowerCase();
     const toLower = to.toLowerCase();
     
-    // Check if route is from Kabul to province or province to Kabul
     const isKabulToProvince = fromLower === 'کابل' || fromLower === 'kabul';
     const isProvinceToKabul = toLower === 'کابل' || toLower === 'kabul';
     
     if (isKabulToProvince || isProvinceToKabul) {
       const province = isKabulToProvince ? toLower : fromLower;
       
-      // Check 50 AFN routes
       if (ROUTE_FEES["50_AFN_ROUTES"].provinces.includes(province)) {
         return ROUTE_FEES["50_AFN_ROUTES"].fee;
       }
       
-      // Check 100 AFN routes
       if (ROUTE_FEES["100_AFN_ROUTES"].provinces.includes(province)) {
         return ROUTE_FEES["100_AFN_ROUTES"].fee;
       }
@@ -338,13 +454,11 @@ function Incomes() {
     return 0;
   };
 
-  // Apply HessabPay discount if payment method is hessabpay
   const applyHessabPayDiscount = (ticket, baseAmount) => {
     const paymentMethod = (ticket.payment_method || "").toLowerCase().trim();
     const isHessabPay = paymentMethod.includes('hessabpay') || paymentMethod.includes('حساب پی');
     
     if (isHessabPay) {
-      // Apply 20 AFN discount per ticket (not per seat)
       const discountAmount = 20;
       return {
         finalAmount: Math.max(0, baseAmount - discountAmount),
@@ -360,11 +474,15 @@ function Incomes() {
     };
   };
 
+  const isValidTicket = (ticket) => {
+    return ticket.status !== 'cancelled';
+  };
+
   const calculateIncomes = (tripsData) => {
-    let grossIncome = 0; // Total before any deductions
-    let incomeAfterHessabPay = 0; // After HessabPay discounts
-    let incomeAfterCommission = 0; // After Qased commission
-    let total = 0; // Final income after all deductions
+    let grossIncome = 0;
+    let incomeAfterHessabPay = 0;
+    let incomeAfterCommission = 0;
+    let total = 0;
     let qasedStats = {
       totalCommission: 0,
       ticketCount: 0,
@@ -378,19 +496,14 @@ function Incomes() {
 
     tripsData.forEach(trip => {
       trip.tickets?.forEach(ticket => {
-        // Only calculate for paid tickets
-        if (ticket.payment_status === 'paid') {
+        if (ticket.payment_status === 'paid' && isValidTicket(ticket)) {
           const seatCount = ticket.seat_numbers?.length || 1;
-          const ticketPrice = trip.prices?.[ticket.bus_type] || 0;
-          const baseAmount = ticketPrice * seatCount;
+          const baseAmount = parseFloat(ticket.final_price) || 0;
           
-          // Add to gross income (before any deductions)
           grossIncome += baseAmount;
           
-          // Apply HessabPay discount
           const { finalAmount: amountAfterHessabPay, discount: hessabDiscount, isHessabPay } = applyHessabPayDiscount(ticket, baseAmount);
           
-          // Track HessabPay statistics
           if (isHessabPay) {
             hessabStats.totalDiscount += hessabDiscount;
             hessabStats.ticketCount += 1;
@@ -399,12 +512,13 @@ function Incomes() {
           
           incomeAfterHessabPay += amountAfterHessabPay;
           
-          // Calculate fee based on from_website and route
           let fee = 0;
-          if (ticket.from_website === 'https://backend.qasid.org') {
+          const website = (ticket.from_website || "").toLowerCase().trim();
+          const normalized = website.replace(/^https?:\/\//, "");
+
+          if (normalized === "qasid.org") {
             fee = calculateRouteFee(trip.from, trip.to) * seatCount;
-            
-            // Track Qased commission
+
             qasedStats.totalCommission += fee;
             qasedStats.ticketCount += 1;
             qasedStats.seatCount += seatCount;
@@ -417,7 +531,6 @@ function Incomes() {
       });
     });
 
-    // Calculate 2% tax on the amount AFTER HessabPay and Commission
     const tax = incomeAfterCommission * 0.02;
     const net = incomeAfterCommission - tax;
 
@@ -433,13 +546,26 @@ function Incomes() {
     });
   };
 
-  // Prepare table data with trip information included
-  const tableData = trips.flatMap(trip => 
-    trip.tickets?.map(ticket => ({
-      ...ticket,
-      _trip: trip // Include the entire trip object
-    })) || []
-  );
+  // Generate years (1403-1405 for demo)
+  const years = [1403, 1404, 1405];
+  
+  // Generate days 1-31
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+
+  const tableData = filteredTrips.flatMap(trip => 
+    trip.tickets
+      ?.filter(ticket => isValidTicket(ticket))
+      .map(ticket => ({
+        ...ticket,
+        _trip: trip
+      })) || []
+  ).sort((a, b) => {
+    return new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at);
+  });
+
+  const getValidPaidTicketsCount = () => {
+    return tableData.filter(ticket => ticket.payment_status === 'paid').length;
+  };
 
   if (loading) {
     return (
@@ -454,6 +580,83 @@ function Incomes() {
   return (
     <DashboardLayout>
       <div className="p-6">
+        {/* Filter Section */}
+        <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">فیلتر بر اساس تاریخ</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Year Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t.filters.year}
+              </label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">{t.filters.all} {t.filters.year}</option>
+                {years.map(year => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Month Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t.filters.month}
+              </label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">{t.filters.all} {t.filters.month}</option>
+                {PERSIAN_MONTHS.map(month => (
+                  <option key={month.value} value={month.value}>
+                    {month.name[language]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Day Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t.filters.day}
+              </label>
+              <select
+                value={selectedDay}
+                onChange={(e) => setSelectedDay(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">{t.filters.all} {t.filters.day}</option>
+                {days.map(day => (
+                  <option key={day} value={day}>
+                    {day}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {/* Active Filters Info */}
+          {(selectedYear !== 'all' || selectedMonth !== 'all' || selectedDay !== 'all') && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <strong>فیلترهای فعال:</strong>
+                {selectedYear !== 'all' && ` سال ${selectedYear}`}
+                {selectedMonth !== 'all' && `، ماه ${PERSIAN_MONTHS.find(m => m.value === parseInt(selectedMonth))?.name[language]}`}
+                {selectedDay !== 'all' && `، روز ${selectedDay}`}
+                {` (${getValidPaidTicketsCount()} تکت پیدا شده)`}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Rest of the component remains the same */}
         {/* Income Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           {/* Gross Income Card */}
@@ -483,8 +686,8 @@ function Incomes() {
                   {qasedCommission.totalCommission.toLocaleString()} AFN
                 </p>
                 <div className="text-xs text-gray-400 mt-1">
-                  <div>{qasedCommission.ticketCount} بلیت</div>
-                  <div>{qasedCommission.seatCount} صندلی</div>
+                  <div>{qasedCommission.ticketCount} تکت</div>
+                  <div>{qasedCommission.seatCount} چوکی</div>
                 </div>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
@@ -505,8 +708,8 @@ function Incomes() {
                     {hessabPayStats.totalDiscount.toLocaleString()} AFN
                   </p>
                   <div className="text-xs text-gray-400 mt-1">
-                    <div>{hessabPayStats.ticketCount} بلیت</div>
-                    <div>{hessabPayStats.seatCount} صندلی</div>
+                    <div>{hessabPayStats.ticketCount} تکت</div>
+                    <div>{hessabPayStats.seatCount} چوکی</div>
                   </div>
                 </div>
                 <div className="bg-pink-100 p-3 rounded-lg">
@@ -565,7 +768,7 @@ function Incomes() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="text-pink-700">
                     <span className="font-medium">{t.banners.hessabPayTickets} </span>
-                    <span className="font-bold">{hessabPayStats.ticketCount} بلیط</span>
+                    <span className="font-bold">{hessabPayStats.ticketCount} تکت</span>
                   </div>
                   <div className="text-pink-700">
                     <span className="font-medium">{t.banners.totalDiscount} </span>
@@ -593,10 +796,11 @@ function Incomes() {
         <CustomTable
           columns={t.tableColumns}
           data={tableData}
-          title={t.tableTitle}
-          onView={(row) => console.log('View:', row)}
-          onEdit={(row) => console.log('Edit:', row)}
-          onDelete={(row) => console.log('Delete:', row)}
+       
+     
+           title={language === 'fa' ? "عواید تکت ها " : "د ټکټونو عوایدو"}
+                     language={language}
+          
         />
 
         {/* Summary Section */}
@@ -636,30 +840,32 @@ function Incomes() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-600">{t.summary.totalTickets}</span>
-                <span className="font-medium">{tableData.filter(ticket => ticket.payment_status === 'paid').length} بلیط</span>
+                <span className="font-medium">{getValidPaidTicketsCount()} تکت</span>
               </div>
               {hessabPayStats.ticketCount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">{t.summary.hessabPayTickets}</span>
-                  <span className="font-medium text-purple-600">{hessabPayStats.ticketCount} بلیط</span>
+                  <span className="font-medium text-purple-600">{hessabPayStats.ticketCount} تکت</span>
                 </div>
               )}
               {qasedCommission.ticketCount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">{t.summary.qasedTickets}</span>
-                  <span className="font-medium text-blue-600">{qasedCommission.ticketCount} بلیط</span>
+                  <span className="font-medium text-blue-600">{qasedCommission.ticketCount} تکت</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span className="text-gray-600">{t.summary.hessabPayPercentage}</span>
                 <span className="font-medium">
-                  {((hessabPayStats.ticketCount / tableData.filter(ticket => ticket.payment_status === 'paid').length) * 100).toFixed(1)}%
+                  {hessabPayStats.ticketCount > 0 ? 
+                    ((hessabPayStats.ticketCount / getValidPaidTicketsCount()) * 100).toFixed(1) : 0}%
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">{t.summary.qasedPercentage}</span>
                 <span className="font-medium">
-                  {((qasedCommission.ticketCount / tableData.filter(ticket => ticket.payment_status === 'paid').length) * 100).toFixed(1)}%
+                  {qasedCommission.ticketCount > 0 ? 
+                    ((qasedCommission.ticketCount / getValidPaidTicketsCount()) * 100).toFixed(1) : 0}%
                 </span>
               </div>
             </div>

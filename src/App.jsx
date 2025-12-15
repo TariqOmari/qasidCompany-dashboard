@@ -17,6 +17,14 @@ import Incomes from "./pages/Incomes";
 import Copones from "./pages/Copones";
 import RatingsLink from "./pages/RatingsLink";
 import TicketPrint from "./components/TicketPrint";
+import Cleaners from "./pages/Cleaners";
+import Busbooking from "./pages/Busbooking";
+import Search from "./pages/Search";
+import BookingDetails from "./pages/BookingDetails";
+import Sets from "./components/Sets";
+import Done from "./components/Done";
+import ChalanList from "./pages/ChalanList";
+import TicketsHistory from "./pages/TicketsHistory";
 
 function App() {
   return (
@@ -159,15 +167,56 @@ function App() {
         />
 
        <Route
-          path="/history"
+          path="/ticketshistory"
           element={
             <ProtectedRoute>
-              <History/>
+              <TicketsHistory/>
             </ProtectedRoute>
           }
 
 
         />
+
+         <Route
+          path="/cleaners"
+          element={
+            <ProtectedRoute>
+            <Cleaners/>
+            </ProtectedRoute>
+          }
+
+
+        />
+
+        
+        
+
+
+         <Route
+          path="/busbooking"
+          element={
+            <ProtectedRoute>
+            <Busbooking/>
+            </ProtectedRoute>
+          }
+
+
+        />
+
+        <Route  path="/search" element={<Search/>} />
+
+        <Route  path="/details" element={<BookingDetails/>} />
+        <Route  path="/sets" element={<Sets/>} />
+
+        <Route  path="/done" element={<Done/>} />
+<Route  path="/list" element={<ChalanList/>} />
+
+
+
+
+
+     
+
 
 
 

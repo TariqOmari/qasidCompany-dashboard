@@ -8,10 +8,115 @@ import { useToast } from '../components/ToastContext';
 import Loader from '../components/Loader';
 import moment from 'jalali-moment';
 import { useLanguage } from '../contexts/LanguageContext.jsX';
-import { translations } from './locales/translations';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const DRIVER_API = `${API_BASE_URL}/api/drivers`;
+
+// Translation objects
+const translations = {
+  fa: {
+    // Page titles
+    manageDrivers: 'مدیریت رانندگان',
+    drivers: 'رانندگان',
+    addDriver: 'افزودن راننده',
+    editDriver: 'ویرایش راننده',
+    refresh: 'تازه‌سازی',
+    search: 'جستجو...',
+    
+    // Table columns
+    columns: [
+      { header: 'نام', accessor: 'name' },
+      { header: 'نام پدر', accessor: 'father_name' },
+      { header: 'تلفن', accessor: 'phone' },
+      { header: 'نمبر لایسنس', accessor: 'license_number' },
+      {
+        header: 'پلېټ نمبر',
+        accessor: 'bus_number_plate',
+        render: (row) => row.bus_number_plate || '-',
+      },
+      {
+        header: 'تاریخ ایجاد',
+        accessor: 'created_at',
+        render: (row) =>
+          row.created_at
+            ? moment(row.created_at).locale('fa').format('jYYYY/jM/jD')
+            : '-',
+      },
+    ],
+    
+    // Form fields
+    fields: [
+      { name: 'name', label: 'نام', type: 'text', placeholder: 'نام راننده', required: true },
+      { name: 'father_name', label: 'نام پدر', type: 'text', placeholder: 'نام پدر' },
+      { name: 'phone', label: 'تلفن', type: 'number', placeholder: 'شماره تلفن' },
+      { name: 'license_number', label: 'نمبر لایسنس', type: 'text', placeholder: 'نمبر لایسنس', required: true },
+      { name: 'bus_number_plate', label: 'نمبر پلېټ', type: 'text', placeholder: 'پلېټ نمبر' },
+    ],
+    
+    // Messages
+    messages: {
+      fetchError: 'خطا در دریافت رانندگان: ',
+      saveSuccess: 'راننده با موفقیت ذخیره شد!',
+      editSuccess: 'راننده با موفقیت ویرایش شد!',
+      deleteSuccess: 'راننده با موفقیت حذف شد!',
+      deleteError: 'خطا در حذف راننده: ',
+      saveError: 'خطا در ذخیره راننده: ',
+      confirmDelete: 'آیا از حذف راننده مطمئن هستید؟',
+      viewInfo: (driver) => `راننده: ${driver.name}\nنام پدر: ${driver.father_name}\nنمبر پلېټ: ${driver.bus_number_plate || '-'}`
+    }
+  },
+  ps: {
+    // Page titles
+    manageDrivers: 'د چلوونکو مدیریت',
+    drivers: 'چلوونکي',
+    addDriver: 'چلوونکی اضافه کړئ',
+    editDriver: 'د چلوونکي سمون',
+    refresh: 'نوی کول',
+    search: 'پلټنه...',
+    
+    // Table columns
+    columns: [
+      { header: 'نوم', accessor: 'name' },
+      { header: 'د پلار نوم', accessor: 'father_name' },
+      { header: 'تلیفون', accessor: 'phone' },
+      { header: 'د لایسنس نمبر', accessor: 'license_number' },
+      {
+        header: 'د نمبر پلېټ',
+        accessor: 'bus_number_plate',
+        render: (row) => row.bus_number_plate || '-',
+      },
+      {
+        header: 'د جوړیدو نېټه',
+        accessor: 'created_at',
+        render: (row) =>
+          row.created_at
+            ? moment(row.created_at).locale('fa').format('jYYYY/jM/jD')
+            : '-',
+      },
+    ],
+    
+    // Form fields
+    fields: [
+      { name: 'name', label: 'نوم', type: 'text', placeholder: 'د چلوونکي نوم', required: true },
+      { name: 'father_name', label: 'د پلار نوم', type: 'text', placeholder: 'د پلار نوم' },
+      { name: 'phone', label: 'تلیفون', type: 'number', placeholder: 'د تلیفون شمېره' },
+      { name: 'license_number', label: 'د لایسنس نمبر', type: 'text', placeholder: 'د لایسنس نمبر', required: true },
+      { name: 'bus_number_plate', label: 'د نمبر پلېټ', type: 'text', placeholder: 'د نمبر پلېټ' },
+    ],
+    
+    // Messages
+    messages: {
+      fetchError: 'د چلوونکو په ترلاسه کولو کې تېروتنه: ',
+      saveSuccess: 'چلوونکی په بریالیتوب سره خوندي شو!',
+      editSuccess: 'چلوونکی په بریالیتوب سره سم شو!',
+      deleteSuccess: 'چلوونکی په بریالیتوب سره ړنګ شو!',
+      deleteError: 'د چلوونکی په ړنګولو کې تېروتنه: ',
+      saveError: 'د چلوونکی په خوندي کولو کې تېروتنه: ',
+      confirmDelete: 'آیا تاسې د چلوونکی د ړنګولو څخه ډاډه یاست؟',
+      viewInfo: (driver) => `چلوونکی: ${driver.name}\nد پلار نوم: ${driver.father_name}\nپلېټ نمبر: ${driver.bus_number_plate || '-'}`
+    }
+  }
+};
 
 const Driver = () => {
   const toast = useToast();
@@ -36,11 +141,7 @@ const Driver = () => {
       setDrivers(sortedDrivers);
     } catch (err) {
       console.error('Error fetching drivers:', err);
-      toast.error(
-        language === 'fa'
-          ? 'خطا در دریافت رانندگان: ' + (err.response?.data?.message || err.message)
-          : 'د چلوونکو په ترلاسه کولو کې تېروتنه: ' + (err.response?.data?.message || err.message)
-      );
+      toast.error(t.messages.fetchError + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -58,10 +159,10 @@ const Driver = () => {
 
       if (editingDriver) {
         await axios.put(`${DRIVER_API}/${editingDriver.id}`, submitData);
-        toast.success(language === 'fa' ? 'راننده با موفقیت ویرایش شد!' : 'چلوونکی په بریالیتوب سره سم شو!');
+        toast.success(t.messages.editSuccess);
       } else {
         await axios.post(DRIVER_API, submitData);
-        toast.success(language === 'fa' ? 'راننده با موفقیت اضافه شد!' : 'چلوونکی په بریالیتوب سره اضافه شو!');
+        toast.success(t.messages.saveSuccess);
       }
 
       await fetchDrivers();
@@ -69,11 +170,7 @@ const Driver = () => {
       setIsModalOpen(false);
     } catch (err) {
       console.error('Error saving driver:', err);
-      toast.error(
-        language === 'fa'
-          ? 'خطا در ذخیره راننده: ' + (err.response?.data?.message || err.message)
-          : 'د چلوونکی په خوندي کولو کې تېروتنه: ' + (err.response?.data?.message || err.message)
-      );
+      toast.error(t.messages.saveError + (err.response?.data?.message || err.message));
     } finally {
       setModalLoading(false);
     }
@@ -81,57 +178,20 @@ const Driver = () => {
 
   // ✅ Delete driver
   const handleDeleteDriver = async (id) => {
-    const confirmMessage =
-      language === 'fa' ? 'آیا از حذف راننده مطمئن هستید؟' : 'آیا تاسې د چلوونکی د ړنګولو څخه ډاډه یاست؟';
-
-    if (!window.confirm(confirmMessage)) return;
+    if (!window.confirm(t.messages.confirmDelete)) return;
 
     setLoading(true);
     try {
       await axios.delete(`${DRIVER_API}/${id}`);
-      toast.success(language === 'fa' ? 'راننده با موفقیت حذف شد!' : 'چلوونکی په بریالیتوب سره ړنګ شو!');
+      toast.success(t.messages.deleteSuccess);
       await fetchDrivers();
     } catch (err) {
       console.error('Error deleting driver:', err);
-      toast.error(
-        language === 'fa'
-          ? 'خطا در حذف راننده: ' + (err.response?.data?.message || err.message)
-          : 'د چلوونکی په ړنګولو کې تېروتنه: ' + (err.response?.data?.message || err.message)
-      );
+      toast.error(t.messages.deleteError + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
   };
-
-  // ✅ Columns
-  const columns = [
-    { header: t.name, accessor: 'name' },
-    { header: t.fatherName, accessor: 'father_name' },
-    { header: t.phone, accessor: 'phone' },
-    { header: language === 'fa' ? 'نمبر لایسنس' : 'د لایسنس نمبر', accessor: 'license_number' },
-    {
-      header: language === 'fa' ? 'پلېټ نمبر' : 'د نمبر پلېټ',
-      accessor: 'bus_number_plate',
-      render: (row) => row.bus_number_plate || '-',
-    },
-    {
-      header: language === 'fa' ? 'تاریخ ایجاد' : 'د جوړیدو نېټه',
-      accessor: 'created_at',
-      render: (row) =>
-        row.created_at
-          ? moment(row.created_at).locale('fa').format('jYYYY/jM/jD')
-          : '-',
-    },
-  ];
-
-  // ✅ Form fields
-  const fields = [
-    { name: 'name', label: t.name, type: 'text', placeholder: language === 'fa' ? 'نام راننده' : 'د چلوونکي نوم', required: true },
-    { name: 'father_name', label: t.fatherName, type: 'text', placeholder: language === 'fa' ? 'نام پدر' : 'د پلار نوم', required: true },
-    { name: 'phone', label: t.phone, type: 'number', placeholder: language === 'fa' ? 'شماره تلفن' : 'د تلیفون شمېره' },
-    { name: 'license_number', label: language === 'fa' ? 'نمبر لایسنس' : 'د لایسنس نمبر', type: 'text', placeholder: language === 'fa' ? 'نمبر لایسنس' : 'د لایسنس نمبر', required: true },
-    { name: 'bus_number_plate', label: language === 'fa' ? 'نمبر پلېټ' : 'د نمبر پلېټ', type: 'text', placeholder: language === 'fa' ? 'پلېټ نمبر' : 'د نمبر پلېټ' },
-  ];
 
   // ✅ Filtered search
   const filteredDrivers = drivers.filter((d) =>
@@ -152,13 +212,13 @@ const Driver = () => {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4">
         <h1 className="text-2xl font-bold text-[#0B2A5B]">
-          {language === 'fa' ? 'مدیریت رانندگان' : 'د چلوونکو مدیریت'}
+          {t.manageDrivers}
         </h1>
 
         <div className="flex items-center gap-2">
           <input
             type="text"
-            placeholder={language === 'fa' ? 'جستجو...' : 'پلټنه...'}
+            placeholder={t.search}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
@@ -168,7 +228,7 @@ const Driver = () => {
             onClick={fetchDrivers}
             className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition flex items-center gap-1"
           >
-            <MdRefresh /> {language === 'fa' ? 'تازه‌سازی' : 'نوی کول'}
+            <MdRefresh /> {t.refresh}
           </button>
 
           <button
@@ -179,28 +239,24 @@ const Driver = () => {
             }}
           >
             <MdPersonAdd />
-            {language === 'fa' ? 'افزودن راننده' : 'چلوونکی اضافه کړئ'}
+            {t.addDriver}
           </button>
         </div>
       </div>
 
       {/* Data Table */}
       <CustomTable
-        columns={columns}
+        columns={t.columns}
         data={filteredDrivers}
-        title={language === 'fa' ? 'رانندگان' : 'چلوونکي'}
-        onView={(driver) =>
-          toast.info(
-            language === 'fa'
-              ? `راننده: ${driver.name}\nنام پدر: ${driver.father_name}\nنمبر پلېټ: ${driver.bus_number_plate || '-'}`
-              : `چلوونکی: ${driver.name}\nد پلار نوم: ${driver.father_name}\nپلېټ نمبر: ${driver.bus_number_plate || '-'}`
-          )
-        }
+        title={t.drivers}
+        language={language}
+    
         onEdit={(driver) => {
           setEditingDriver(driver);
           setIsModalOpen(true);
         }}
         onDelete={(driver) => handleDeleteDriver(driver.id)}
+         // Add this line to pass the language prop
       />
 
       {/* Modal */}
@@ -212,18 +268,11 @@ const Driver = () => {
         }}
         onSubmit={handleSaveDriver}
         initialData={editingDriver}
-        title={
-          editingDriver
-            ? language === 'fa'
-              ? 'ویرایش راننده'
-              : 'د چلوونکي سمون'
-            : language === 'fa'
-            ? 'افزودن راننده'
-            : 'چلوونکی اضافه کړئ'
-        }
-        fields={fields}
+        title={editingDriver ? t.editDriver : t.addDriver}
+        fields={t.fields}
         existingDrivers={drivers}
         editingDriver={editingDriver}
+         language={language} // Add this line
         isLoading={modalLoading}
       />
     </DashboardLayout>

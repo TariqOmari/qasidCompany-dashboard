@@ -7,7 +7,7 @@ import { RiBusFill, RiNumbersFill } from 'react-icons/ri';
 import CustomFormModal from '../components/modals/CustomFormModal';
 import { useToast } from '../components/ToastContext';
 import moment from 'jalali-moment';
-import { useLanguage } from '../contexts/LanguageContext.jsX';// Import language context
+import { useLanguage } from '../contexts/LanguageContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -41,6 +41,7 @@ const translations = {
     titles: {
       manageBuses: 'مدیریت بس‌ها',
       busList: 'لیست بس‌ها',
+      tableTitle: 'لیست بس‌ها', // Add this for CustomTable
       newBus: 'ثبت بس جدید',
       editBus: 'ویرایش بس',
       save: 'ذخیره',
@@ -87,6 +88,7 @@ const translations = {
     titles: {
       manageBuses: 'د بسونو مدیریت',
       busList: 'د بسونو لیست',
+      tableTitle: 'د بسونو لیست', // Add this for CustomTable
       newBus: 'نوی بس ثبت کړی',
       editBus: 'بس سمول',
       save: 'خوندي کول',
@@ -153,7 +155,7 @@ function Buses() {
       }
     };
     fetchBuses();
-  }, [language]); // Re-fetch when language changes
+  }, [language, toast, t.messages.tokenNotFound, t.messages.fetchError]);
 
   const getInitialData = () =>
     editingBus
@@ -257,8 +259,9 @@ function Buses() {
           <CustomTable
             columns={t.columns}
             data={busesData}
-            title={t.titles.busList}
-            onView={(bus) => console.log("View bus:", bus)}
+            title={t.titles.tableTitle} // Use the proper table title
+            language={language} // Pass language prop to CustomTable
+          
             onEdit={handleEditBus}
             onDelete={(bus) => handleDeleteBus(bus.id)}
           />
@@ -274,6 +277,7 @@ function Buses() {
           initialData={getInitialData()}
           existingBuses={busesData}
           editingBus={editingBus}
+            language={language} // Add this line to pass the language prop
         />
       </div>
     </DashboardLayout>

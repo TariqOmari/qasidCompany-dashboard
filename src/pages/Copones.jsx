@@ -11,21 +11,22 @@ const API = import.meta.env.VITE_API_BASE_URL;
 const translations = {
   fa: {
     columns: [
-      { header: "کد کوپن", accessor: "code" },
+      { header: "کد تخفیف ", accessor: "code" },
       { header: "مقدار تخفیف", accessor: "amount" },
       { header: "تاریخ انقضا", accessor: "expiry_date" },
       { header: "حداکثر استفاده", accessor: "usage_limit" },
+      
     ],
     titles: {
-      manageCoupons: "مدیریت کوپن‌ها",
-      coupons: "کوپن‌ها",
-      addCoupon: "اضافه کردن کوپن",
-      editCoupon: "ویرایش کوپن",
+      manageCoupons: "مدیریت تخفیف ‌ ها",
+      coupons: "تخفیف ‌ها",
+      addCoupon: "اضافه کردن تخفیف ",
+      editCoupon: "ویرایش تخفیف ",
       update: "به‌روزرسانی",
       add: "اضافه کردن"
     },
     placeholders: {
-      code: "کد کوپن",
+      code: "کد تخفیف ",
       amount: "مقدار تخفیف",
       expiry_date: "تاریخ انقضا",
       usage_limit: "حداکثر استفاده"
@@ -37,28 +38,28 @@ const translations = {
   },
   ps: {
     columns: [
-      { header: "د کوپن کوډ", accessor: "code" },
+      { header: "د تخفیف  کوډ", accessor: "code" },
       { header: "د تخفیف مقدار", accessor: "amount" },
       { header: "د پای نیټه", accessor: "expiry_date" },
       { header: "د کارونې حد", accessor: "usage_limit" },
     ],
     titles: {
-      manageCoupons: "د کوپنونو مدیریت",
-      coupons: "کوپنونه",
-      addCoupon: "کوپن اضافه کول",
-      editCoupon: "کوپن سمول",
+      manageCoupons: "د تخفیفونو مدیریت",
+      coupons: "تخفیفونه",
+      addCoupon: "تخفیف  اضافه کول",
+      editCoupon: "تخفیف  سمول",
       update: "اوسمهالول",
       add: "اضافه کول"
     },
     placeholders: {
-      code: "د کوپن کوډ",
+      code: "د تخفیف  کوډ",
       amount: "د تخفیف مقدار",
       expiry_date: "د پای نیټه",
       usage_limit: "د کارونې حد"
     },
     messages: {
       loading: "په بار کېږي...",
-      confirmDelete: (code) => `آیا تاسی ډاډه یاست چې کوپن "${code}" ړنگ کړئ؟`
+      confirmDelete: (code) => `آیا تاسی ډاډه یاست چې تخفیف  "${code}" ړنگ کړئ؟`
     }
   }
 };
@@ -173,9 +174,14 @@ function Copones() {
           <CustomTable
             columns={t.columns}
             data={coupons}
-            title={t.titles.coupons}
+   
             onEdit={(row) => openModal(row)}
             onDelete={handleDelete}
+
+             title={language === 'fa' ? "  تخفیف ها " : " تخفیفونو "}
+                     language={language}
+
+
           />
         )}
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   MdDelete,
   MdEdit,
@@ -19,23 +19,80 @@ const CustomTable = ({
   onDelete,
   selectable = false,
   onSelectionChange,
+  selectedItems = [],
+  clearSelection = false,
+  language = "fa", // Add language prop with default Farsi
 }) => {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 5;
+  const rowsPerPage = 60;
   const totalPages = Math.ceil(data.length / rowsPerPage);
+
+  const translations = {
+    fa: {
+      tableTitle: (title) => `مدیریت داده‌های ${title}`,
+      operations: "عملیات",
+      noData: "هیچ داده‌ای موجود نیست",
+      selectAll: "انتخاب همه",
+      selectedCount: "مورد انتخاب شده",
+      previous: "قبلی",
+      next: "بعدی",
+      view: "مشاهده",
+      edit: "ویرایش",
+      delete: "حذف",
+    },
+    ps: {
+      tableTitle: (title) => `د ${title} مدیریت`,
+      operations: "عملیات",
+      noData: "هیڅ معلومات نشته",
+      selectAll: "ټول انتخاب کړئ",
+      selectedCount: "انتخاب شوي توکي",
+      previous: "پخوانی",
+      next: "بل",
+      view: "لیدل",
+      edit: "سمول",
+      delete: "ړنگول",
+    }
+  };
+  
+  const t = translations[language] || translations.fa;
 
   const paginatedData = data.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
 
+  // Clear selection when clearSelection prop changes
+  useEffect(() => {
+    if (clearSelection) {
+      setSelectedRows(new Set());
+      if (onSelectionChange) {
+        onSelectionChange([]);
+      }
+    }
+  }, [clearSelection, onSelectionChange]);
+
+  // Initialize selection from selectedItems only once on mount
+  useEffect(() => {
+    if (selectedItems && selectedItems.length > 0) {
+      const selectedIndices = new Set();
+      data.forEach((item, index) => {
+        if (selectedItems.some(selectedItem => selectedItem.id === item.id)) {
+          selectedIndices.add(index);
+        }
+      });
+      setSelectedRows(selectedIndices);
+    }
+  }, []);
+
   const toggleRowSelection = (index) => {
     const actualIndex = (currentPage - 1) * rowsPerPage + index;
     const newSelectedRows = new Set(selectedRows);
+    
     newSelectedRows.has(actualIndex)
       ? newSelectedRows.delete(actualIndex)
       : newSelectedRows.add(actualIndex);
+    
     setSelectedRows(newSelectedRows);
 
     if (onSelectionChange) {
@@ -48,7 +105,7 @@ const CustomTable = ({
     const start = (currentPage - 1) * rowsPerPage;
     const end = currentPage * rowsPerPage;
     const currentPageIndices = new Set(
-      data.slice(start, end).map((_, i) => i + start)
+      Array.from({ length: end - start }, (_, i) => i + start)
     );
 
     const newSelectedRows = new Set(selectedRows);
@@ -56,9 +113,11 @@ const CustomTable = ({
       newSelectedRows.has(i)
     );
 
-    allSelected
-      ? currentPageIndices.forEach((i) => newSelectedRows.delete(i))
-      : currentPageIndices.forEach((i) => newSelectedRows.add(i));
+    if (allSelected) {
+      currentPageIndices.forEach((i) => newSelectedRows.delete(i));
+    } else {
+      currentPageIndices.forEach((i) => newSelectedRows.add(i));
+    }
 
     setSelectedRows(newSelectedRows);
 
@@ -68,10 +127,15 @@ const CustomTable = ({
     }
   };
 
+  // Reset current page when data changes significantly
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data.length]);
+
   return (
     <div
       className="bg-white rounded-2xl shadow-md p-3 sm:p-5 w-full font-sans"
-      dir="rtl"
+      dir={language === "fa" ? "rtl" : "rtl"}
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-3">
@@ -86,27 +150,22 @@ const CustomTable = ({
               {title}
             </h2>
             <p className="text-xs sm:text-sm text-gray-500">
-              مدیریت داده‌های {title}
+              {t.tableTitle(title)}
             </p>
           </div>
         </div>
 
         {selectable && selectedRows.size > 0 && (
           <div className="bg-blue-50 text-blue-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">
-            {selectedRows.size} مورد انتخاب شده
+            {selectedRows.size} {t.selectedCount}
           </div>
         )}
       </div>
 
-      {/* Scrollable table container */}
-      <div
-        className="overflow-x-auto rounded-xl scrollbar-thin scrollbar-thumb-[#F37021] scrollbar-track-gray-100"
-        style={{
-          WebkitOverflowScrolling: "touch",
-          maxWidth: "100%",
-        }}
-      >
-        <table className="min-w-[650px] sm:min-w-full text-xs sm:text-sm border-separate border-spacing-y-2">
+      {/* REMOVE scrollable container - Let browser handle scrolling */}
+      {/* Table directly without extra wrapper */}
+      <div className="w-full">
+        <table className="w-full text-xs sm:text-sm border-separate border-spacing-y-2">
           <thead>
             <tr className="bg-[#0B2A5B] text-white text-[11px] sm:text-sm">
               {selectable && (
@@ -114,17 +173,17 @@ const CustomTable = ({
                   <button
                     onClick={toggleSelectAll}
                     className="flex items-center justify-center w-full"
-                    title="انتخاب همه"
+                    title={t.selectAll}
                   >
                     {(() => {
                       const start = (currentPage - 1) * rowsPerPage;
                       const end = currentPage * rowsPerPage;
-                      const currentPageIndices = data
-                        .slice(start, end)
-                        .map((_, i) => i + start);
-                      const allSelected = currentPageIndices.every((i) =>
-                        selectedRows.has(i)
+                      const currentPageIndices = Array.from(
+                        { length: end - start }, 
+                        (_, i) => i + start
                       );
+                      const allSelected = currentPageIndices.length > 0 && 
+                        currentPageIndices.every((i) => selectedRows.has(i));
                       return allSelected ? (
                         <MdCheckBox size={16} />
                       ) : (
@@ -142,9 +201,11 @@ const CustomTable = ({
                   {col.header}
                 </th>
               ))}
-              <th className="px-2 sm:px-4 py-2 text-right font-semibold rounded-t-md whitespace-nowrap">
-                عملیات
-              </th>
+              {(onView || onEdit || onDelete) && (
+                <th className="px-2 sm:px-4 py-2 text-right font-semibold rounded-t-md whitespace-nowrap">
+                  {t.operations}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -185,43 +246,48 @@ const CustomTable = ({
                       {col.render ? col.render(row) : row[col.accessor]}
                     </td>
                   ))}
-                  <td className="px-2 sm:px-4 py-2 text-right">
-                    <div className="flex gap-2 justify-start items-center">
-                      {onView && (
-                        <button
-                          className="text-[#F37021] hover:text-orange-600 transition"
-                          onClick={() => onView(row)}
-                        >
-                          <MdVisibility size={16} />
-                        </button>
-                      )}
-                      {onEdit && (
-                        <button
-                          className="text-[#F37021] hover:text-orange-600 transition"
-                          onClick={() => onEdit(row)}
-                        >
-                          <MdEdit size={16} />
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          className="text-[#F37021] hover:text-orange-600 transition"
-                          onClick={() => onDelete(row)}
-                        >
-                          <MdDelete size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                  {(onView || onEdit || onDelete) && (
+                    <td className="px-2 sm:px-4 py-2 text-right">
+                      <div className="flex gap-2 justify-start items-center">
+                        {onView && (
+                          <button
+                            className="text-[#F37021] hover:text-orange-600 transition"
+                            onClick={() => onView(row)}
+                            title={t.view}
+                          >
+                            <MdVisibility size={16} />
+                          </button>
+                        )}
+                        {onEdit && (
+                          <button
+                            className="text-[#F37021] hover:text-orange-600 transition"
+                            onClick={() => onEdit(row)}
+                            title={t.edit}
+                          >
+                            <MdEdit size={16} />
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button
+                            className="text-[#F37021] hover:text-orange-600 transition"
+                            onClick={() => onDelete(row)}
+                            title={t.delete}
+                          >
+                            <MdDelete size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             ) : (
               <tr>
                 <td
-                  colSpan={columns.length + (selectable ? 2 : 1)}
+                  colSpan={columns.length + (selectable ? 1 : 0) + ((onView || onEdit || onDelete) ? 1 : 0)}
                   className="text-center text-gray-400 py-4 sm:py-6"
                 >
-                  هیچ داده‌ای موجود نیست
+                  {t.noData}
                 </td>
               </tr>
             )}
@@ -241,7 +307,7 @@ const CustomTable = ({
                 : "text-blue-600 hover:bg-blue-100"
             }`}
           >
-            <MdArrowBack /> قبلی
+            <MdArrowBack /> {t.previous}
           </button>
 
           {[...Array(totalPages)].map((_, i) => (
@@ -267,7 +333,7 @@ const CustomTable = ({
                 : "text-blue-600 hover:bg-blue-100"
             }`}
           >
-            بعدی <MdArrowForward />
+            {t.next} <MdArrowForward />
           </button>
         </div>
       )}

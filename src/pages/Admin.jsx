@@ -4,6 +4,10 @@ import DashboardLayout from '../components/DashboardLayout';
 import Loader from '../components/Loader';
 
 function Admin() {
+  
+  
+  
+  
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
 
