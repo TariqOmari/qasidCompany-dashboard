@@ -2047,19 +2047,32 @@ const ChalanNumberModal = ({
   );
 };
   // Get all tickets from trips data
-  const getAllTicketsFromTrips = () => {
-    return allTrips.flatMap(trip => 
-      trip.tickets?.map(ticket => ({
-        ...ticket,
-        trip: {
-          id: trip.id,
-          from: trip.from,
-          to: trip.to,
-          departure_time: trip.departure_time
-        }
-      })) || []
-    );
-  };
+  // Get all tickets from trips data with qasid filter
+const getAllTicketsFromTrips = () => {
+  return allTrips.flatMap(trip => 
+    trip.tickets?.filter(ticket => {
+      // Check if ticket is from qasid website
+      const isFromQasid = ticket.from_website && 
+        ticket.from_website.includes('qasid.org');
+      
+      if (isFromQasid) {
+        // Only exclude qasid tickets if payment_status is NOT 'paid'
+        return ticket.payment_status === 'paid';
+      }
+      
+      // Include all other tickets
+      return true;
+    }).map(ticket => ({
+      ...ticket,
+      trip: {
+        id: trip.id,
+        from: trip.from,
+        to: trip.to,
+        departure_time: trip.departure_time
+      }
+    })) || []
+  );
+};
 
   // Fetch all tickets for update modal
   const fetchAllTickets = async () => {
@@ -2634,51 +2647,71 @@ const ChalanNumberModal = ({
 
   // Fetch all trips to get all from/to locations for filters
   useEffect(() => {
-    const fetchTrips = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get(`${API_BASE_URL}/api/trips-with-tickets`);
-        let allTripsData = res.data.trips || [];
+// Replace the trips filtering logic with this:
+
+const fetchTrips = async () => {
+  try {
+    setLoading(true);
+    const res = await axios.get(`${API_BASE_URL}/api/trips-with-tickets`);
+    let allTripsData = res.data.trips || [];
+    
+    // Sort trips by created_at in descending order (newest first)
+    allTripsData = allTripsData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    setAllTrips(allTripsData);
+    
+    // Extract unique from and to locations from ALL trips
+    const fromLocations = [...new Set(allTripsData.map(trip => trip.from))];
+    const toLocations = [...new Set(allTripsData.map(trip => trip.to))];
+    setUniqueFromLocations(fromLocations);
+    setUniqueToLocations(toLocations);
+    
+    // Filter tickets in each trip based on your criteria
+    const filteredTripsData = allTripsData.map(trip => {
+      // Filter tickets in this trip
+      const filteredTickets = (trip.tickets || []).filter(ticket => {
+        // Check if ticket is from qasid website
+        const isFromQasid = ticket.from_website && 
+          ticket.from_website.includes('qasid.org');
         
-        // Sort trips by created_at in descending order (newest first)
-        allTripsData = allTripsData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        if (isFromQasid) {
+          // Only exclude qasid tickets if payment_status is NOT 'paid'
+          return ticket.payment_status === 'paid';
+        }
         
-        setAllTrips(allTripsData);
-        
-        // Extract unique from and to locations from ALL trips
-        const fromLocations = [...new Set(allTripsData.map(trip => trip.from))];
-        const toLocations = [...new Set(allTripsData.map(trip => trip.to))];
-        setUniqueFromLocations(fromLocations);
-        setUniqueToLocations(toLocations);
-        
-        // Don't filter out arrived tickets initially - let the filter handle it
-        const tripsWithAllTickets = allTripsData.map(trip => ({
-          ...trip,
-          tickets: trip.tickets || []
-        }));
-        
-        setTrips(tripsWithAllTickets);
-        setFilteredTrips(tripsWithAllTickets);
-        
-        // Calculate new statistics (exclude arrived for stats)
-        const newStats = calculateStats(tripsWithAllTickets);
-        setStats(newStats);
-        
-        // Fetch arrived tickets for history
-        fetchArrivedTickets();
-        
-        // Fetch existing chalans
-        await fetchChalans();
-        
-        // Fetch all tickets for update modal
-        await fetchAllTickets();
-        
-      } catch (error) {
-        console.error("Error fetching trips:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        // Include all other tickets (non-qasid AND qasid paid tickets)
+        return true;
+      });
+      
+      return {
+        ...trip,
+        tickets: filteredTickets
+      };
+    }).filter(trip => trip.tickets.length > 0); // Only keep trips that have tickets after filtering
+    
+    // Set trips with filtered tickets
+    setTrips(filteredTripsData);
+    setFilteredTrips(filteredTripsData);
+    
+    // Calculate new statistics
+    const newStats = calculateStats(filteredTripsData);
+    setStats(newStats);
+    
+    // Fetch arrived tickets for history
+    fetchArrivedTickets();
+    
+    // Fetch existing chalans
+    await fetchChalans();
+    
+    // Fetch all tickets for update modal
+    await fetchAllTickets();
+    
+  } catch (error) {
+    console.error("Error fetching trips:", error);
+  } finally {
+    setLoading(false);
+  }
+};
     fetchTrips();
   }, []);
 
@@ -4863,6 +4896,8 @@ const clearSelectedTickets = () => {
             )}
           </div>
         </div>
+
+        
 
         {/* Seat Modal */}
         <SeatModal 
