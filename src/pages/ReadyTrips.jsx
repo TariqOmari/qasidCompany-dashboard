@@ -1206,7 +1206,7 @@ const convertTo12HourPersian = (time) => {
                 </div>
 
                 {/* Time Filter - Hour */}
-              <div>
+                <div>
                   <label className="text-sm text-gray-600 mb-1">{language === 'fa' ? 'ساعت' : 'ساعت'}</label>
                   <select
                     value={filters.hour}
@@ -4244,11 +4244,63 @@ const clearSelectedTickets = () => {
     max="31"
   />
 </div>
+<div className="flex flex-col min-w-[150px]">
+                    <label className="text-sm text-gray-600 mb-1">{language === 'fa' ? 'مبدا' : 'سرچینه'}</label>
+                    <select
+                      value={selectedFrom}
+                      onChange={(e) => setSelectedFrom(e.target.value)}
+                      className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-full"
+                    >
+                      <option value="">{language === 'fa' ? 'همه مبداها' : 'ټولې سرچینې'}</option>
+                      {uniqueFromLocations.map((location, index) => (
+                        <option key={index} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* To Filter */}
+                  <div className="flex flex-col min-w-[150px]">
+                    <label className="text-sm text-gray-600 mb-1">{language === 'fa' ? 'مقصد' : 'منزل'}</label>
+                    <select
+                      value={selectedTo}
+                      onChange={(e) => setSelectedTo(e.target.value)}
+                      className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-full"
+                    >
+                      <option value="">{language === 'fa' ? 'همه مقصدها' : 'ټول منزلونه'}</option>
+                      {uniqueToLocations.map((location, index) => (
+                        <option key={index} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+{/* Enhanced Time Picker - Matching Tripa Style */}
 <div className="flex flex-col min-w-[160px]">
-  <label className="text-sm text-gray-600 mb-1 flex items-center ml-[90px] gap-2 justify-end">
-    {language === 'fa' ? 'زمان حرکت' : 'د تګ وخت'}
- 
-  </label>
+  <div className="flex items-center justify-between mb-1">
+    <label className="text-sm text-gray-600 flex items-center ml-[90px] gap-2 justify-end">
+      {language === 'fa' ? 'زمان حرکت' : 'د تګ وخت'}
+    </label>
+    
+    {/* Reset Clock Button */}
+    {(selectedHour || selectedMinute || selectedPeriod || selectedTime) && (
+      <button
+        onClick={() => {
+          setSelectedTime('');
+          setSelectedHour('');
+          setSelectedMinute('');
+          setSelectedPeriod('');
+        }}
+        className="text-xs text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors flex items-center gap-1"
+        title={language === 'fa' ? 'بازنشانی زمان' : 'وخت بیا تنظیم کول'}
+      >
+        <RiCloseLine className="text-xs" />
+        {language === 'fa' ? 'بازنشانی' : 'بیا تنظیم'}
+      </button>
+    )}
+  </div>
+  
   <div className="relative">
     <input
       type="time"
@@ -4288,54 +4340,27 @@ const clearSelectedTickets = () => {
       className="w-full border border-gray-300 rounded-lg p-2 pr-10 focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm text-right direction-ltr"
       dir="ltr"
     />
- 
+    <RiTimeLine className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
   </div>
-  {selectedTime && (
+  
+  {/* Display selected time in 12-hour format */}
+  {selectedTime ? (
     <div className="text-xs text-green-600 mt-1 text-center bg-green-50 py-1 rounded">
       {formatTimeForDisplay(selectedTime)}
     </div>
-  )}
-  {!selectedTime && (
+  ) : (
     <div className="text-xs text-gray-500 mt-1 text-center">
-      {language === 'fa' ? 'HH:MM' : 'HH:MM'}
+      {language === 'fa' ? 'همه زمان‌ها' : 'ټول وختونه'}
     </div>
   )}
 </div>
 
+{/* Hour Filter with All Option */}
+
+
                   
                   {/* From Filter */}
-                  <div className="flex flex-col min-w-[150px]">
-                    <label className="text-sm text-gray-600 mb-1">{language === 'fa' ? 'مبدا' : 'سرچینه'}</label>
-                    <select
-                      value={selectedFrom}
-                      onChange={(e) => setSelectedFrom(e.target.value)}
-                      className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-full"
-                    >
-                      <option value="">{language === 'fa' ? 'همه مبداها' : 'ټولې سرچینې'}</option>
-                      {uniqueFromLocations.map((location, index) => (
-                        <option key={index} value={location}>
-                          {location}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                   
-                  {/* To Filter */}
-                  <div className="flex flex-col min-w-[150px]">
-                    <label className="text-sm text-gray-600 mb-1">{language === 'fa' ? 'مقصد' : 'منزل'}</label>
-                    <select
-                      value={selectedTo}
-                      onChange={(e) => setSelectedTo(e.target.value)}
-                      className="border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-full"
-                    >
-                      <option value="">{language === 'fa' ? 'همه مقصدها' : 'ټول منزلونه'}</option>
-                      {uniqueToLocations.map((location, index) => (
-                        <option key={index} value={location}>
-                          {location}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                   
                   {/* Bus Type Filter */}
                   <div className="flex flex-col min-w-[120px]">
